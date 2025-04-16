@@ -14,22 +14,54 @@ datasource db {
 }
 
 model User {
+  id                      Int          @id @default(autoincrement())
+  firstname               String
+  lastname                String
+  username                String       @unique
+  email                   String       @unique
+  password                String
+  role                    UserRole
+  profile                 Profile?
+  posts                   Post[]
+  jobs                    Job[]
+  matches                 Match[]
+
+  savedJobs               Job[]    @relation("SavedJobs")
+  connectionsSent         Connection[] @relation("UserRequests")
+  connectionsReceived     Connection[] @relation("UserReceives")
+}
+
+enum UserRole {
+  CANDIDATE
+  RECRUITER
+}
+
+model Connection {
   id             Int      @id @default(autoincrement())
-  name           String
-  email          String   @unique
-  password       String
-  role           UserRole
-  profile        Profile?
-  jobs           Job[]
-  matches        Match[]
+  senderId       Int      
+  receiverId     Int  
+  status         ConnectionStatus @default(PENDING)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @default(now()) @updatedAt
+  
+  sender         User     @relation("UserRequests", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver       User     @relation("UserReceives", fields: [receiverId], references: [id], onDelete: Cascade)
+}
+
+enum ConnectionStatus{
+  PENDING
+  ACCEPTED
 }
 
 model Profile {
   id             Int      @id @default(autoincrement())
-  skills         String   
-  experience     String
+  profilePicture String   @default("")
+  about          String   @default("")
+  skills         String[] @default([""])
+  experience     String[] @default([""])
+  education      String[] @default([""])
   userId         Int      @unique
-  user           User     @relation(fields: [userId], references: [id])
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Job {
@@ -38,8 +70,26 @@ model Job {
   description    String
   requirements   String
   recruiterId    Int
-  match          Match[]
-  recruiter      User     @relation(fields: [recruiterId], references: [id])
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime 
+  recruiter      User     @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
+
+  savedByCandidates User[] @relation("SavedJobs")
+}
+
+model Post {
+  id             Int      @id @default(autoincrement())
+  description    String   
+  userId         Int      
+  comments       Comment[]
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Comment {
+  id             Int      @id @default(autoincrement())
+  comment        String
+  postId         Int
+  post           Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 }
 
 model Match {
@@ -47,11 +97,6 @@ model Match {
   jobId          Int
   userId         Int
   matchScore     Int
-  job            Job      @relation(fields: [jobId], references: [id])
   user           User     @relation(fields:  [userId], references: [id])
 }
 
-enum UserRole {
-  CANDIDATE
-  RECRUITER
-}
