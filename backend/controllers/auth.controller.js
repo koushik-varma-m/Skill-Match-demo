@@ -2,11 +2,8 @@ const {userSignin, userSignup} = require('../models/user.model');
 const bcrypt = require('bcrypt');
 const createToken = require("../utils/createToken")
 const { PrismaClient } = require('@prisma/client');
-const asyncHandler = require('../middlewares/asyncHandler');
-
 
 const prisma = new PrismaClient();
-
 const saltRounds = 10;
 
 const createUser = async (req,res) => {
@@ -16,62 +13,109 @@ const createUser = async (req,res) => {
             where: { email }
         })
         if(existingUser){
-            res.status(302).json({
-                message:"User Already exists"
-            })
+            res.status(409).json({
+                message: "User already exists"
+            });
             return;
-        }else{
+        }
+        
             bcrypt.hash(password, saltRounds, async function(err, hash){
+            if (err) {
+                res.status(500).json({ error: 'Error hashing password' });
+                return;
+            }
+            
+            try {
                 const newUser = await prisma.user.create({
-                    data: { firstname, lastname, email, username, role, password:hash },
+                    data: { firstname, lastname, email, username, role, password: hash },
+                    select: {
+                        id: true,
+                        firstname: true,
+                        lastname: true,
+                        email: true,
+                        role: true,
+                        username: true
+                    }
                 });
+                
                 await prisma.profile.create({
                     data: {
                         userId: newUser.id,
                     }
-                })
-                res.status(201).json(newUser);
+                });
+                
+                const token = createToken(res, newUser.id);
+                res.status(201).json({ 
+                    user: newUser,
+                    token 
             });
-        }
+            } catch (error) {
+                console.error('Error creating user:', error);
+                res.status(500).json({ error: 'Error creating user' });
+            }
+        });
     } catch (error) {
-        console.log(error);
-        res.status(500).json({error: 'Error creating user'});
+        console.error('Validation error:', error);
+        res.status(400).json({ error: 'Invalid input data' });
     }
 }
 
 const loginUser = async (req,res) => {
     const { email, password } = userSignin.parse(req.body);
     try{
-        const User = await prisma.user.findUnique({
-            where: { email }
-        })
-        if(User){
-            bcrypt.compare(password, User.password, function(err, result) {
-                if(result){
-                    createToken(res, User.id);
-                    res.status(201).json(User);
-                }else{
-                    res.status(302).json({
-                        message:"Password is incorrect"
-                    })
-                }
+        const user = await prisma.user.findUnique({
+            where: { email },
+            select: {
+                id: true,
+                firstname: true,
+                lastname: true,
+                email: true,
+                role: true,
+                username: true,
+                password: true
+            }
+        });
+
+        if (!user) {
+            res.status(401).json({
+                message: "Invalid email or password"
             });
-            
-        }else{
-            res.status(302).json({
-                message:"User email address does not exist"
-            })
+            return;
         }
+
+        bcrypt.compare(password, user.password, function(err, result) {
+            if (err) {
+                console.error('Password comparison error:', err);
+                res.status(500).json({ error: 'Error during login' });
+                return;
+            }
+
+            if (result) {
+                // Remove password from user object
+                const { password, ...userWithoutPassword } = user;
+                const token = createToken(res, user.id);
+                res.status(200).json({
+                    user: userWithoutPassword,
+                    token
+                });
+            } else {
+                res.status(401).json({
+                    message: "Invalid email or password"
+                });
+        }
+        });
     } catch (error) {
-        console.log(error);
-        res.status(500).json({error: 'Error logging user'});
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Error during login' });
     }
 }
 
 const logoutUser = async (req, res) => {
     res.cookie("jwt", "", {
-        httyOnly: true,
+        httpOnly: true,
         expires: new Date(0),
+        secure: process.env.NODE_ENV !== "development",
+        sameSite: "strict"
     });
     res.status(200).json({ message: "Logged out successfully" });
 }

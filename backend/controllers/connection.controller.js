@@ -42,19 +42,14 @@ const sendConnectionRequest = async(req,res) => {
                 return res.status(400).json({message: "You have rejected the connection request"});
             }
         }
-        try{
-            const newRequest = await prisma.connection.create({
-                data: {
-                    senderId: sender.id,
-                    receiverId: Number(userId)
-                }
-            });
-        }catch(error){
-            return res.json({message: 'error while sending the request'});
-        }
+        const newRequest = await prisma.connection.create({
+            data: {
+                senderId: sender.id,
+                receiverId: Number(userId)
+            }
+        });
         
-
-        return res.json({message: 'Connection request has been sent'});
+        return res.json({message: 'Connection request has been sent', newRequest});
     }catch(error){
         console.log(error);
         res.status(500).json("Server error");
@@ -66,30 +61,92 @@ const acceptConnectionRequest = async(req,res) => {
         const { requestId } = req.params;
         const userId = req.user.id;
 
+        // Debug logging
+        console.log('=== Accept Connection Request Debug ===');
+        console.log('Request params:', req.params);
+        console.log('Request body:', req.body);
+        console.log('User from request:', req.user);
+        console.log('Request ID:', requestId);
+        console.log('User ID:', userId);
+
+        // Validate request ID
+        if (!requestId) {
+            console.log('No request ID provided');
+            return res.status(400).json({message: "Request ID is required"});
+        }
+
+        const requestIdNum = Number(requestId);
+        if (isNaN(requestIdNum)) {
+            console.log('Invalid request ID format:', requestId);
+            return res.status(400).json({message: "Invalid request ID format"});
+        }
+
+        // Find the connection request
         const connectionRequest = await prisma.connection.findFirst({
-            where: {id: Number(requestId)}
-        })
+            where: {id: requestIdNum}
+        });
+
+        console.log('Found connection request:', connectionRequest);
 
         if (!connectionRequest){
+            console.log('No connection request found with ID:', requestId);
             return res.status(404).json({message: "Connection request not found"});
         }
 
-        if (connectionRequest.receiverId.toString()!==userId.toString()){
-            return res.status(403).json({message: "Not authorised to accept this request"});
+        // Debug ID comparison
+        console.log('ID Comparison:', {
+            connectionReceiverId: connectionRequest.receiverId,
+            userId: userId,
+            receiverIdType: typeof connectionRequest.receiverId,
+            userIdType: typeof userId,
+            receiverIdString: connectionRequest.receiverId.toString(),
+            userIdString: userId.toString()
+        });
+
+        // Check authorization
+        if (connectionRequest.receiverId.toString() !== userId.toString()){
+            console.log('Authorization failed:', {
+                connectionReceiverId: connectionRequest.receiverId,
+                userId: userId
+            });
+            return res.status(403).json({
+                message: "Not authorised to accept this request",
+                details: {
+                    connectionReceiverId: connectionRequest.receiverId,
+                    userId: userId
+                }
+            });
         }
 
+        // Check status
         if(connectionRequest.status !== "PENDING"){
-            return res.status(400).json({message:"Request already processed"});
+            console.log('Request already processed:', {
+                currentStatus: connectionRequest.status
+            });
+            return res.status(400).json({
+                message: "Request already processed",
+                currentStatus: connectionRequest.status
+            });
         }
 
+        // Update the connection
         const updatedConnectionRequest = await prisma.connection.update({
-            where: { id:Number(requestId)},
+            where: { id: requestIdNum},
             data: { status: "ACCEPTED"}
         });
-        res.status(200).json({message: "Request Accepted", connection: updatedConnectionRequest});
+
+        console.log('Updated connection request:', updatedConnectionRequest);
+        
+        res.status(200).json({
+            message: "Request Accepted", 
+            connection: updatedConnectionRequest
+        });
     }catch(error) {
-        console.log(error);
-        res.status(500).json({ message: "Server error" });
+        console.error('Error in acceptConnectionRequest:', error);
+        res.status(500).json({ 
+            message: "Server error",
+            error: error.message 
+        });
     }
 }
  
@@ -98,24 +155,74 @@ const removeConnection = async(req,res) => {
         const { requestId } = req.params;
         const userId = req.user.id;
 
-        const connectionRequest = await prisma.connection.findFirst({
-            where: {id: Number(requestId)}
-        })
+        console.log('=== Remove Connection Debug ===');
+        console.log('Request params:', req.params);
+        console.log('User ID:', userId);
 
-        if (!connectionRequest){
-            return res.status(404).json({message: "Connection request not found"});
+        // Validate request ID
+        if (!requestId) {
+            console.log('No request ID provided');
+            return res.status(400).json({message: "Request ID is required"});
         }
 
-        if (connectionRequest.receiverId.toString()!==userId.toString() && connectionRequest.senderId.toString()!==userId.toString()){
-            return res.status(403).json({message: "Not authorised to remove this request"});
+        const requestIdNum = Number(requestId);
+        if (isNaN(requestIdNum)) {
+            console.log('Invalid request ID format:', requestId);
+            return res.status(400).json({message: "Invalid request ID format"});
         }
-        await prisma.connection.delete({
-            where: {id: Number(requestId)}
+
+        // Find the connection
+        const connection = await prisma.connection.findFirst({
+            where: {id: requestIdNum}
         });
-        res.status(200).json({message: "Connection removed"});
+
+        console.log('Found connection:', connection);
+
+        if (!connection){
+            console.log('No connection found with ID:', requestId);
+            return res.status(404).json({message: "Connection not found"});
+        }
+
+        // Check if user is authorized to remove this connection
+        const isAuthorized = connection.receiverId.toString() === userId.toString() || 
+                           connection.senderId.toString() === userId.toString();
+
+        console.log('Authorization check:', {
+            connectionReceiverId: connection.receiverId,
+            connectionSenderId: connection.senderId,
+            userId: userId,
+            isAuthorized
+        });
+
+        if (!isAuthorized){
+            console.log('User not authorized to remove this connection');
+            return res.status(403).json({
+                message: "Not authorized to remove this connection",
+                details: {
+                    connectionReceiverId: connection.receiverId,
+                    connectionSenderId: connection.senderId,
+                    userId: userId
+                }
+            });
+        }
+
+        // Delete the connection
+        const deletedConnection = await prisma.connection.delete({
+            where: {id: requestIdNum}
+        });
+
+        console.log('Deleted connection:', deletedConnection);
+
+        res.status(200).json({
+            message: "Connection removed successfully",
+            connection: deletedConnection
+        });
     }catch(error) {
-        console.log(error);
-        res.status(500).json({ message: "Server error" });
+        console.error('Error in removeConnection:', error);
+        res.status(500).json({ 
+            message: "Server error",
+            error: error.message 
+        });
     }
 }
 
@@ -151,34 +258,67 @@ const getConnectionSentRequests = async(req,res) => {
 const getConnectionReceivedRequests = async(req,res) => {
     try{
         const userId = req.user.id;
+        console.log('Fetching received requests for user:', userId);
+
         const requests = await prisma.connection.findMany({
-            where: {receiverId: userId},
+            where: {
+                receiverId: userId,
+                status: "PENDING"  // Only get pending requests
+            },
             select: {
-                senderId:true,
-                status:true
+                id: true,
+                senderId: true,
+                status: true
             }
-        })
+        });
+
+        console.log('Found received requests:', requests);
+
         const requestsProfile = await Promise.all(requests.map(async(request)=> {
-            return({
-                Name: (await prisma.user.findUnique({
-                    where:{ id: request.senderId},
+            const sender = await prisma.user.findUnique({
+                where: { id: request.senderId},
+                select: {
+                    id: true,
+                    firstname: true,
+                    lastname: true,
+                    email: true,
+                    role: true,
+                    profile: {
                     select: {
-                        firstname: true
+                            profilePicture: true
+                        }
                     }
-                })).firstname,
-                status: request.status
-            })
-        }))
-        res.json({message: "Requests Received", connection: requestsProfile});
+                    }
+            });
+
+            return {
+                id: request.id,
+                Name: sender?.firstname || 'Unknown User',
+                status: request.status,
+                sender: sender
+            };
+        }));
+
+        console.log('Processed requests profile:', requestsProfile);
+
+        res.json({
+            message: "Requests Received", 
+            connection: requestsProfile
+        });
     }catch(error){
-        console.log(error);
-        res.json({message: "Server Error"});
+        console.error('Error in getConnectionReceivedRequests:', error);
+        res.json({
+            message: "Server Error",
+            error: error.message
+        });
     }
 }
 
 const getUserConnections = async(req,res) => {
     try{
         const userId = req.user.id;
+        console.log('Fetching connections for user:', userId);
+
         const connections = await prisma.connection.findMany({
             where: {
                 AND:[
@@ -187,30 +327,51 @@ const getUserConnections = async(req,res) => {
                 ]
             },
             select: {
+                id: true,
                 senderId: true,
-                receiverId: true
+                receiverId: true,
+                status: true
             }
         });
-        const connectionIDs = connections.map(connection=> {
-            return connection.senderId==userId? connection.receiverId: connection.senderId
-        })
-        const connectionProfiles = await Promise.all(connectionIDs.map(async(c) => {
-            return await prisma.user.findFirst({
-                where:{ id: c},
-                select:{
-                    firstname:true,
-                    profile:{
-                        select:{
-                            profilePicture:true
+
+        console.log('Found connections:', connections);
+
+        const connectionProfiles = await Promise.all(connections.map(async(connection) => {
+            const otherUserId = connection.senderId == userId ? connection.receiverId : connection.senderId;
+            const user = await prisma.user.findFirst({
+                where: { id: otherUserId },
+                select: {
+                    id: true,
+                    firstname: true,
+                    lastname: true,
+                    email: true,
+                    role: true,
+                    profile: {
+                        select: {
+                            profilePicture: true
                         }
                     }
                 }
-            })
+            });
+
+            return {
+                ...user,
+                connectionId: connection.id // Include the connection ID
+            };
         }));
-        res.status(200).json({message: "Connections", connection:connectionProfiles});
+
+        console.log('Fetched connection profiles:', connectionProfiles);
+
+        res.status(200).json({
+            message: "Connections retrieved successfully",
+            connection: connectionProfiles
+        });
     }catch(error){
-        console.log(error);
-        res.status(500).json({message: "Server Error"});
+        console.error('Error in getUserConnections:', error);
+        res.status(500).json({
+            message: "Server Error",
+            error: error.message
+        });
     }
 }
 

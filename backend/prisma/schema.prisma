@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,89 +8,125 @@ datasource db {
 }
 
 model User {
-  id                      Int          @id @default(autoincrement())
-  firstname               String
-  lastname                String
-  username                String       @unique
-  email                   String       @unique
-  password                String
-  role                    UserRole
-  profile                 Profile?
-  posts                   Post[]
-  jobs                    Job[]
-  matches                 Match[]
-
-  savedJobs               Job[]    @relation("SavedJobs")
-  connectionsSent         Connection[] @relation("UserRequests")
-  connectionsReceived     Connection[] @relation("UserReceives")
-}
-
-enum UserRole {
-  CANDIDATE
-  RECRUITER
-}
-
-model Connection {
-  id             Int      @id @default(autoincrement())
-  senderId       Int      
-  receiverId     Int  
-  status         ConnectionStatus @default(PENDING)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @default(now()) @updatedAt
-  
-  sender         User     @relation("UserRequests", fields: [senderId], references: [id], onDelete: Cascade)
-  receiver       User     @relation("UserReceives", fields: [receiverId], references: [id], onDelete: Cascade)
-}
-
-enum ConnectionStatus{
-  PENDING
-  ACCEPTED
+  id        Int      @id @default(autoincrement())
+  firstname String
+  lastname  String
+  email     String   @unique
+  password  String
+  username  String   @unique
+  role      Role     @default(CANDIDATE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  profile   Profile?
+  posts     Post[]
+  comments  Comment[]
+  sentConnections     Connection[] @relation("SentConnections")
+  receivedConnections Connection[] @relation("ReceivedConnections")
+  likedPosts         Post[]       @relation("LikedPosts")
+  savedJobs         Job[]        @relation("SavedJobs")
+  postedJobs        Job[]        @relation("PostedJobs")
+  applications      JobApplication[]
 }
 
 model Profile {
   id             Int      @id @default(autoincrement())
-  profilePicture String   @default("")
-  about          String   @default("")
-  skills         String[] @default([""])
-  experience     String[] @default([""])
-  education      String[] @default([""])
   userId         Int      @unique
+  profilePicture String?
+  about          String?
+  skills         String[]
+  experience     String[]
+  education      String[]
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model Job {
-  id             Int      @id @default(autoincrement())
-  title          String   
-  description    String
-  requirements   String
-  recruiterId    Int
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime 
-  recruiter      User     @relation(fields: [recruiterId], references: [id], onDelete: Cascade)
-
-  savedByCandidates User[] @relation("SavedJobs")
 }
 
 model Post {
-  id             Int      @id @default(autoincrement())
-  description    String   
-  userId         Int      
-  comments       Comment[]
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        Int       @id @default(autoincrement())
+  content   String
+  image     String?
+  userId    Int
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comments  Comment[]
+  like      User[]    @relation("LikedPosts")
 }
 
 model Comment {
-  id             Int      @id @default(autoincrement())
-  comment        String
-  postId         Int
-  post           Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  id        Int      @id @default(autoincrement())
+  comment   String
+  postId    Int
+  userId    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model Match {
-  id             Int      @id @default(autoincrement())
-  jobId          Int
-  userId         Int
-  matchScore     Int
-  user           User     @relation(fields:  [userId], references: [id])
+model Connection {
+  id         Int      @id @default(autoincrement())
+  senderId   Int
+  receiverId Int
+  status     ConnectionStatus   @default(PENDING)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  sender     User     @relation("SentConnections", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("ReceivedConnections", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
 }
 
+model Job {
+  id          Int      @id @default(autoincrement())
+  title       String
+  company     String
+  location    String
+  type        String
+  description String
+  requirements String[]
+  skills      String[]
+  experience  String
+  education   String
+  salary      String?
+  recruiterId Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  recruiter   User     @relation("PostedJobs", fields: [recruiterId], references: [id], onDelete: Cascade)
+  savedByCandidates User[] @relation("SavedJobs")
+  applications JobApplication[]
+}
+
+model JobApplication {
+  id            Int      @id @default(autoincrement())
+  jobId         Int
+  candidateId   Int
+  coverLetter   String
+  resumePath    String
+  expectedSalary String?
+  noticePeriod  String?
+  availableFrom DateTime?
+  status        ApplicationStatus   @default(PENDING)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  job           Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  candidate     User     @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, candidateId])
+} 
+
+enum Role {
+  CANDIDATE
+  RECRUITER
+}
+
+enum ConnectionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWING
+  ACCEPTED
+  REJECTED
+}
