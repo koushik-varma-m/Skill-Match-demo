@@ -14,6 +14,7 @@ import MyApplications from './components/MyApplications';
 import RecruiterApplications from './components/RecruiterApplications';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
+import Notifications from './components/Notifications';
 
 function App() {
   return (
@@ -77,7 +78,7 @@ function App() {
                 } 
               />
               <Route 
-                path="/applications" 
+                path="/my-applications" 
                 element={
                   <PrivateRoute>
                     <MyApplications />
@@ -85,7 +86,7 @@ function App() {
                 } 
               />
               <Route 
-                path="/recruiter/applications" 
+                path="/recruiter-applications" 
                 element={
                   <PrivateRoute>
                     <RecruiterApplications />
@@ -107,6 +108,14 @@ function App() {
                     <Connections />
                   </PrivateRoute>
                 } 
+              />
+              <Route
+                path="/notifications"
+                element={
+                  <PrivateRoute>
+                    <Notifications />
+                  </PrivateRoute>
+                }
               />
             </Routes>
           </main>

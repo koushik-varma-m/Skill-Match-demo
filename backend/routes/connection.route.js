@@ -12,7 +12,7 @@ const {
 } = require('../controllers/connection.controller');
 
 router.post('/request/:userId', authMiddleware, sendConnectionRequest);
-router.put('/accept/:requestId', authMiddleware, acceptConnectionRequest);
+router.put('/accept/:connectionId', authMiddleware, acceptConnectionRequest);
 router.put('/remove/:requestId', authMiddleware, removeConnection);
 
 router.get('/requests/sent', authMiddleware, getConnectionSentRequests);

@@ -111,7 +111,7 @@ const updateProfile = async(req, res) => {
         }
 
         // Handle other fields
-        for(const field of allowedFields) {
+    for(const field of allowedFields) {
             if (req.body[field] !== undefined) {
                 console.log(`Processing field ${field}:`, req.body[field]);
                 if (field === 'skills') {
@@ -126,9 +126,9 @@ const updateProfile = async(req, res) => {
                         : req.body[field];
                 } else {
                     // Handle about as plain string
-                    updatedData[field] = req.body[field];
-                }
-            }
+            updatedData[field] = req.body[field];
+        }
+    }
         }
 
         console.log('Updated data:', updatedData);
@@ -154,7 +154,7 @@ const updateProfile = async(req, res) => {
             // Update existing profile
             profile = await prisma.profile.update({
                 where: { userId: userId },
-                data: updatedData
+        data: updatedData
             });
             console.log('Profile updated:', profile);
         }
@@ -175,7 +175,7 @@ const updateProfile = async(req, res) => {
         console.log('User data retrieved:', user);
 
         // Combine user and profile data in response
-        res.json({
+    res.json({
             ...user,
             profilePicture: profile.profilePicture,
             about: profile.about,

@@ -205,7 +205,7 @@ const Connections = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-teal-600"></div>
       </div>
     );
   }
@@ -229,14 +229,14 @@ const Connections = () => {
             placeholder="Search by name or email..."
             className="flex-1 input-field"
           />
-          <button type="submit" className="btn-primary">
+          <button type="submit" className="bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-md font-medium transition-colors duration-200">
             Search
           </button>
         </form>
 
         {searchLoading ? (
           <div key="search-loading" className="flex justify-center items-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-teal-600"></div>
           </div>
         ) : searchResults.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2">
@@ -265,7 +265,7 @@ const Connections = () => {
                     <button
                       onClick={() => handleSendRequest(result.id)}
                       disabled={result.connectionStatus === 'PENDING' || result.connectionStatus === 'CONNECTED'}
-                      className={`btn-primary text-sm ${
+                      className={`bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-md font-medium transition-colors duration-200 ${
                         result.connectionStatus === 'PENDING' ? 'bg-gray-400' :
                         result.connectionStatus === 'CONNECTED' ? 'bg-green-600' : ''
                       }`}
@@ -291,7 +291,7 @@ const Connections = () => {
         <h2 className="text-xl font-bold mb-4">Suggested Connections</h2>
         {suggestionsLoading ? (
           <div key="suggestions-loading" className="flex justify-center items-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-teal-600"></div>
           </div>
         ) : suggestions.length > 0 ? (
           <div className="grid gap-4 md:grid-cols-2">
@@ -320,7 +320,7 @@ const Connections = () => {
                         <p className="text-xs text-gray-500">Matching Skills:</p>
                         <div className="flex flex-wrap gap-1 mt-1">
                           {suggestion.matchingSkills.map((skill, index) => (
-                            <span key={`skill-${suggestion.id}-${index}`} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                            <span key={`skill-${suggestion.id}-${index}`} className="px-2 py-1 bg-teal-100 text-teal-800 text-xs rounded-full">
                               {skill}
                             </span>
                           ))}
@@ -332,7 +332,7 @@ const Connections = () => {
                     <button
                       onClick={() => handleSendRequest(suggestion.id)}
                       disabled={suggestion.connectionStatus === 'PENDING' || suggestion.connectionStatus === 'CONNECTED'}
-                      className={`btn-primary text-sm ${
+                      className={`bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-md font-medium transition-colors duration-200 ${
                         suggestion.connectionStatus === 'PENDING' ? 'bg-gray-400' :
                         suggestion.connectionStatus === 'CONNECTED' ? 'bg-green-600' : ''
                       }`}
@@ -372,7 +372,7 @@ const Connections = () => {
                   {request.status === 'PENDING' && (
                     <button
                       onClick={() => handleRemoveConnection(request.id)}
-                      className="btn-secondary"
+                      className="bg-teal-100 text-teal-800 hover:bg-teal-200 px-4 py-2 rounded-md font-medium transition-colors duration-200"
                     >
                       Cancel Request
                     </button>
@@ -402,13 +402,13 @@ const Connections = () => {
                   <div className="space-x-2">
                     <button
                       onClick={() => handleAcceptRequest(request.id)}
-                      className="btn-primary"
+                      className="bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-md font-medium transition-colors duration-200"
                     >
                       Accept
                     </button>
                     <button
                       onClick={() => handleRemoveConnection(request.id)}
-                      className="btn-secondary"
+                      className="bg-teal-100 text-teal-800 hover:bg-teal-200 px-4 py-2 rounded-md font-medium transition-colors duration-200"
                     >
                       Decline
                     </button>

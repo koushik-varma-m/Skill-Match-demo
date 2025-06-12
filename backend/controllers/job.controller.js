@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const path = require('path');
 const { sendEmail, emailTemplates } = require('../utils/emailService');
+const { createNotification } = require('./notification.controller');
 
 const getAllJobPosts = async(req, res) => {
     try {
@@ -76,6 +77,28 @@ const createJob = async (req, res) => {
         const job = await prisma.job.create({
             data: jobData
         });
+
+        // Get all connections of the recruiter
+        const connections = await prisma.connection.findMany({
+            where: {
+                OR: [
+                    { senderId: recruiterId, status: 'ACCEPTED' },
+                    { receiverId: recruiterId, status: 'ACCEPTED' },
+                ],
+            },
+        });
+
+        // Create notifications for all connections
+        const notificationPromises = connections.map(connection => {
+            const connectionUserId = connection.senderId === recruiterId ? connection.receiverId : connection.senderId;
+            return createNotification(
+                connectionUserId,
+                'NEW_JOB',
+                `${req.user.firstname} ${req.user.lastname} posted a new job: ${title}`
+            );
+        });
+
+        await Promise.all(notificationPromises);
 
         res.status(201).json({
             message: "Job created successfully",
@@ -472,21 +495,38 @@ const applyForJob = async(req, res) => {
 
 const getMyApplications = async (req, res) => {
     try {
-        if (req.user.role !== 'CANDIDATE') {
-            return res.status(403).json({ message: "Only candidates can view their applications" });
-        }
-
+        const userId = req.user.id;
         const applications = await prisma.jobApplication.findMany({
             where: {
-                candidateId: req.user.id
+                candidateId: userId
             },
             include: {
                 job: {
                     select: {
+                        id: true,
                         title: true,
                         company: true,
                         location: true,
-                        type: true
+                        type: true,
+                        description: true,
+                        requirements: true,
+                        skills: true,
+                        experience: true,
+                        education: true,
+                        salary: true,
+                        recruiter: {
+                            select: {
+                                id: true,
+                                firstname: true,
+                                lastname: true,
+                                email: true,
+                                profile: {
+                                    select: {
+                                        profilePicture: true
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -496,13 +536,13 @@ const getMyApplications = async (req, res) => {
         });
 
         res.status(200).json({
-            message: "Applications retrieved successfully",
+            message: 'Applications retrieved successfully',
             applications
         });
     } catch (error) {
         console.error('Error in getMyApplications:', error);
         res.status(500).json({
-            message: "Failed to retrieve applications",
+            message: 'Failed to retrieve applications',
             error: error.message
         });
     }

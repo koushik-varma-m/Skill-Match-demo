@@ -123,7 +123,7 @@ const Posts = () => {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
       </div>
     );
   }
@@ -160,8 +160,8 @@ const Posts = () => {
                 file:mr-4 file:py-2 file:px-4
                 file:rounded-full file:border-0
                 file:text-sm file:font-semibold
-                file:bg-blue-50 file:text-blue-700
-                hover:file:bg-blue-100"
+                file:bg-teal-50 file:text-teal-700
+                hover:file:bg-teal-100"
             />
             {imagePreview && (
               <div className="mt-2">
@@ -183,7 +183,7 @@ const Posts = () => {
               </div>
             )}
           </div>
-          <button type="submit" className="btn-primary mt-4">
+          <button type="submit" className="bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-md font-medium transition-colors duration-200 mt-4">
             Post
           </button>
         </form>
@@ -305,7 +305,7 @@ const Posts = () => {
                 />
                 <button
                   onClick={() => handleComment(post.id)}
-                  className="btn-primary"
+                  className="bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-md font-medium transition-colors duration-200"
                   disabled={!newComment[post.id]}
                 >
                   Comment

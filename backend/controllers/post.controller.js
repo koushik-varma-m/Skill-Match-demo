@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const path = require('path');
 const fs = require('fs');
 const prisma = new PrismaClient();
+const { createNotification } = require('./notification.controller');
 
 const getAllPosts = async(req, res) => {
     try{
@@ -182,6 +183,29 @@ const createPost = async(req, res) => {
                 }
             }
         });
+
+        // Get all connections of the user
+        const connections = await prisma.connection.findMany({
+            where: {
+                OR: [
+                    { senderId: req.user.id, status: 'ACCEPTED' },
+                    { receiverId: req.user.id, status: 'ACCEPTED' },
+                ],
+            },
+        });
+
+        // Create notifications for all connections
+        const notificationPromises = connections.map(connection => {
+            const connectionUserId = connection.senderId === req.user.id ? connection.receiverId : connection.senderId;
+            return createNotification(
+                connectionUserId,
+                'NEW_POST',
+                `${req.user.firstname} ${req.user.lastname} created a new post`
+            );
+        });
+
+        await Promise.all(notificationPromises);
+
         res.status(200).json({message: "Post created", createdPost});
     }catch(error){
         console.error('Error in createPost:', error);

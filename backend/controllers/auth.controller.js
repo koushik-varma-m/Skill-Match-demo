@@ -7,19 +7,32 @@ const prisma = new PrismaClient();
 const saltRounds = 10;
 
 const createUser = async (req,res) => {
-    const { firstname, lastname, email, role, password, username } = userSignup.parse(req.body);
-    try{
-        const existingUser = await prisma.user.findUnique({
+    try {
+        const { firstname, lastname, email, role, password, username } = userSignup.parse(req.body);
+        
+        // Check for existing email
+        const existingEmail = await prisma.user.findUnique({
             where: { email }
-        })
-        if(existingUser){
+        });
+        if(existingEmail){
             res.status(409).json({
-                message: "User already exists"
+                message: "Email already exists"
+            });
+            return;
+        }
+
+        // Check for existing username
+        const existingUsername = await prisma.user.findUnique({
+            where: { username }
+        });
+        if(existingUsername){
+            res.status(409).json({
+                message: "Username already exists"
             });
             return;
         }
         
-            bcrypt.hash(password, saltRounds, async function(err, hash){
+        bcrypt.hash(password, saltRounds, async function(err, hash){
             if (err) {
                 res.status(500).json({ error: 'Error hashing password' });
                 return;
@@ -48,7 +61,7 @@ const createUser = async (req,res) => {
                 res.status(201).json({ 
                     user: newUser,
                     token 
-            });
+                });
             } catch (error) {
                 console.error('Error creating user:', error);
                 res.status(500).json({ error: 'Error creating user' });

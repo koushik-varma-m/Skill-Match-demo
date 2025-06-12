@@ -13,7 +13,7 @@ const authMiddleware = asyncHandler(async (req, res, next) => {
     }
     // If no token in header, check cookies
     else if (req.cookies.jwt) {
-        token = req.cookies.jwt;
+    token = req.cookies.jwt;
         console.log('Token found in cookies');
     }
     
@@ -27,7 +27,7 @@ const authMiddleware = asyncHandler(async (req, res, next) => {
 
     try {
         // Verify token
-        const decoded = jwt.verify(token, process.env.SECRET_KEY);
+            const decoded = jwt.verify(token, process.env.SECRET_KEY);
         console.log('Token decoded:', decoded);
         
         if (!decoded || !decoded.userId) {

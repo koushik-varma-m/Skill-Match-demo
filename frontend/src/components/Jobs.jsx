@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import JobApplicationForm from './JobApplicationForm';
 
-const JobList = ({ onEditJob, onDeleteJob }) => {
+const JobList = ({ onEditJob, onDeleteJob, onPostNewJob }) => {
   const [jobs, setJobs] = useState([]);
   const [filteredJobs, setFilteredJobs] = useState([]);
   const [error, setError] = useState(null);
@@ -129,7 +129,7 @@ const JobList = ({ onEditJob, onDeleteJob }) => {
 
   if (loading) {
     return <div className="flex justify-center items-center min-h-screen">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
     </div>;
   }
 
@@ -151,7 +151,7 @@ const JobList = ({ onEditJob, onDeleteJob }) => {
             value={quickSearch}
             onChange={(e) => setQuickSearch(e.target.value)}
             placeholder="Search jobs by title, company, location, or skills..."
-            className="w-full px-6 py-4 text-lg border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 shadow-sm pl-12"
+            className="w-full px-6 py-4 text-lg border rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500 shadow-sm pl-12"
           />
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <svg className="h-6 w-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -177,7 +177,7 @@ const JobList = ({ onEditJob, onDeleteJob }) => {
                 value={searchParams.location}
                 onChange={handleSearchChange}
                 placeholder="Enter location"
-                className="w-full px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
               />
             </div>
             
@@ -190,7 +190,7 @@ const JobList = ({ onEditJob, onDeleteJob }) => {
                 name="type"
                 value={searchParams.type}
                 onChange={handleSearchChange}
-                className="w-full px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
               >
                 <option value="">All Types</option>
                 <option value="FULL_TIME">Full Time</option>
@@ -202,14 +202,14 @@ const JobList = ({ onEditJob, onDeleteJob }) => {
             
             <div>
               <label htmlFor="experience" className="block text-sm font-medium text-gray-700 mb-1">
-                Experience
+                Experience Level
               </label>
               <select
                 id="experience"
                 name="experience"
                 value={searchParams.experience}
                 onChange={handleSearchChange}
-                className="w-full px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
               >
                 <option value="">All Levels</option>
                 <option value="ENTRY">Entry Level</option>
@@ -219,22 +219,34 @@ const JobList = ({ onEditJob, onDeleteJob }) => {
               </select>
             </div>
           </div>
-          <div className="flex justify-end gap-4">
+          <div className="flex justify-between items-center">
             <button
               type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
             >
               Apply Filters
             </button>
             <button
               type="button"
               onClick={handleClearSearch}
-              className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              className="px-4 py-2 text-gray-600 hover:text-gray-800"
             >
               Clear Filters
             </button>
           </div>
         </form>
+
+        {/* Post a New Job Button - Only visible to recruiters */}
+        {user?.role === 'RECRUITER' && (
+          <div className="mt-6 flex justify-end">
+            <button
+              onClick={() => onPostNewJob()}
+              className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 transition-colors duration-200"
+            >
+              Post a New Job
+            </button>
+          </div>
+        )}
       </div>
 
       {filteredJobs.length === 0 ? (
@@ -252,7 +264,7 @@ const JobList = ({ onEditJob, onDeleteJob }) => {
                   <div className="flex gap-2">
                     <button
                       onClick={() => handleEditClick(job)}
-                      className="text-blue-600 hover:text-blue-800"
+                      className="text-teal-600 hover:text-teal-800"
                       title="Edit Job"
                     >
                       <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -280,7 +292,7 @@ const JobList = ({ onEditJob, onDeleteJob }) => {
                 <h3 className="font-semibold mb-2">Required Skills:</h3>
                 <div className="flex flex-wrap gap-2">
                   {job.skills?.map((skill, index) => (
-                    <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                    <span key={index} className="px-3 py-1 bg-teal-100 text-teal-800 rounded-full text-sm">
                       {skill}
                     </span>
                   ))}
@@ -292,7 +304,7 @@ const JobList = ({ onEditJob, onDeleteJob }) => {
                 </span>
                 {user?.role === 'CANDIDATE' && (
                   (() => {
-                    console.log('Job:', job.title, 'Application Status:', job.applicationStatus); // Debug log
+                    console.log('Job:', job.title, 'Application Status:', job.applicationStatus);
                     return job.applicationStatus ? (
                       <span className={`px-4 py-2 rounded-lg text-sm font-medium ${
                         job.applicationStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
@@ -304,7 +316,7 @@ const JobList = ({ onEditJob, onDeleteJob }) => {
                     ) : (
                       <button
                         onClick={() => handleApply(job)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
                       >
                         Apply Now
                       </button>

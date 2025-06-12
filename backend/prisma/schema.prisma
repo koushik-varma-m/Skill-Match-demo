@@ -26,6 +26,7 @@ model User {
   savedJobs         Job[]        @relation("SavedJobs")
   postedJobs        Job[]        @relation("PostedJobs")
   applications      JobApplication[]
+  notifications     Notification[]
 }
 
 model Profile {
@@ -112,6 +113,19 @@ model JobApplication {
 
   @@unique([jobId, candidateId])
 } 
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  type      String   // CONNECTION_REQUEST, CONNECTION_ACCEPTED, NEW_POST, NEW_JOB
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
 
 enum Role {
   CANDIDATE

@@ -106,7 +106,7 @@ const JobApplicationForm = ({ job, onClose, onSuccess }) => {
               onChange={handleChange}
               required
               rows="6"
-              className="input-field w-full"
+              className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
               placeholder="Explain why you're a good fit for this role..."
             />
           </div>
@@ -120,7 +120,7 @@ const JobApplicationForm = ({ job, onClose, onSuccess }) => {
               accept=".pdf,.doc,.docx"
               onChange={handleFileChange}
               required
-              className="input-field w-full"
+              className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
             />
             <p className="text-sm text-gray-500 mt-1">
               Accepted formats: PDF, DOC, DOCX (Max size: 5MB)
@@ -136,7 +136,7 @@ const JobApplicationForm = ({ job, onClose, onSuccess }) => {
               name="expectedSalary"
               value={formData.expectedSalary}
               onChange={handleChange}
-              className="input-field w-full"
+              className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
               placeholder="e.g., $80,000 per annum"
             />
           </div>
@@ -150,7 +150,7 @@ const JobApplicationForm = ({ job, onClose, onSuccess }) => {
               name="noticePeriod"
               value={formData.noticePeriod}
               onChange={handleChange}
-              className="input-field w-full"
+              className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
               placeholder="e.g., 1 month"
             />
           </div>
@@ -164,7 +164,7 @@ const JobApplicationForm = ({ job, onClose, onSuccess }) => {
               name="availableFrom"
               value={formData.availableFrom}
               onChange={handleChange}
-              className="input-field w-full"
+              className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
             />
           </div>
 
@@ -172,14 +172,14 @@ const JobApplicationForm = ({ job, onClose, onSuccess }) => {
             <button
               type="button"
               onClick={onClose}
-              className="btn-secondary"
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="btn-primary"
+              className="px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Submitting...' : 'Submit Application'}
             </button>

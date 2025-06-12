@@ -37,7 +37,7 @@ const RecruiterDashboard = () => {
   };
 
   const handleReviewApplications = () => {
-    navigate('/recruiter/applications');
+    navigate('/recruiter-applications');
   };
 
   const handleViewCandidates = () => {
@@ -45,21 +45,17 @@ const RecruiterDashboard = () => {
   };
 
   const handlePostNewJob = () => {
-    navigate('/jobs');
+    navigate('/jobs', { state: { showJobForm: true } });
   };
 
   const handleSearchCandidates = () => {
     navigate('/connections');
   };
 
-  const handleViewMessages = () => {
-    navigate('/messages');
-  };
-
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600"></div>
       </div>
     );
   }
@@ -76,71 +72,84 @@ const RecruiterDashboard = () => {
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow p-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-4">Welcome, {user?.firstname}!</h1>
-        <p className="text-gray-600">Your recruiter dashboard helps you manage job postings and candidates.</p>
+        <p className="text-gray-600">Your recruiter dashboard is here to help you manage your hiring process.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Active Job Postings */}
+      {/* Stats Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Active Job Postings</h2>
-          <div className="text-3xl font-bold text-blue-600 mb-2">{stats.activeJobs}</div>
-          <p className="text-gray-600 mb-4">Currently active job postings</p>
-          <button 
-            onClick={handleManageJobs}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            Manage Jobs
-          </button>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Active Jobs</h3>
+          <p className="text-3xl font-bold text-teal-600">{stats.activeJobs}</p>
         </div>
-
-        {/* New Applications */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">New Applications</h2>
-          <div className="text-3xl font-bold text-green-600 mb-2">{stats.newApplications}</div>
-          <p className="text-gray-600 mb-4">Applications received today</p>
-          <button 
-            onClick={handleReviewApplications}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            Review Applications
-          </button>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">New Applications</h3>
+          <p className="text-3xl font-bold text-teal-600">{stats.newApplications}</p>
         </div>
-
-        {/* Candidate Pool */}
         <div className="bg-white rounded-lg shadow p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Candidate Pool</h2>
-          <div className="text-3xl font-bold text-purple-600 mb-2">{stats.totalCandidates}</div>
-          <p className="text-gray-600 mb-4">Total candidates in your network</p>
-          <button 
-            onClick={handleViewCandidates}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-          >
-            View Candidates
-          </button>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Total Candidates</h3>
+          <p className="text-3xl font-bold text-teal-600">{stats.totalCandidates}</p>
         </div>
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-          <button 
-            onClick={handlePostNewJob}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Manage Jobs Card */}
+        <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Manage Jobs</h2>
+          <p className="text-gray-600 mb-4">View and manage your job postings.</p>
+          <button
+            onClick={handleManageJobs}
+            className="w-full bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-md transition-colors duration-200"
           >
-            Post New Job
+            View Jobs
           </button>
-          <button 
+        </div>
+
+        {/* Applications Card */}
+        <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Review Applications</h2>
+          <p className="text-gray-600 mb-4">Review and manage job applications.</p>
+          <button
+            onClick={handleReviewApplications}
+            className="w-full bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-md transition-colors duration-200"
+          >
+            View Applications
+          </button>
+        </div>
+
+        {/* Post Job Card */}
+        <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Post New Job</h2>
+          <p className="text-gray-600 mb-4">Create a new job posting.</p>
+          <button
+            onClick={handlePostNewJob}
+            className="w-full bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-md transition-colors duration-200"
+          >
+            Post Job
+          </button>
+        </div>
+
+        {/* Search Candidates Card */}
+        <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Search Candidates</h2>
+          <p className="text-gray-600 mb-4">Find qualified candidates for your positions.</p>
+          <button
             onClick={handleSearchCandidates}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+            className="w-full bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-md transition-colors duration-200"
           >
             Search Candidates
           </button>
-          <button 
-            onClick={handleViewMessages}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+        </div>
+
+        {/* Network Card */}
+        <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Network</h2>
+          <p className="text-gray-600 mb-4">Build your professional network.</p>
+          <button
+            onClick={handleViewCandidates}
+            className="w-full bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-md transition-colors duration-200"
           >
-            View Messages
+            View Network
           </button>
         </div>
       </div>

@@ -1,152 +1,108 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { createNotification } = require('./notification.controller');
 
 const sendConnectionRequest = async(req,res) => {
     try{
+        const receiverId = parseInt(req.params.userId);
+        const senderId = req.user.id;
 
-        const { userId } = req.params;
-        const sender = req.user;
-
-        if (userId==sender.id.toString()){
-            res.status(400).json({message: "You cannot send connection request to yourself"});
+        if (!receiverId) {
+            return res.status(400).json({ message: 'Receiver ID is required' });
         }
 
-        const existingConnectionsSent = await prisma.connection.findFirst({
-            where: {senderId: sender.id,
-                receiverId: Number(userId)
-            }
+        // Check if connection already exists
+        const existingConnection = await prisma.connection.findFirst({
+            where: {
+                OR: [
+                    { senderId, receiverId },
+                    { senderId: receiverId, receiverId: senderId },
+                ],
+            },
         });
 
-        if(existingConnectionsSent){
-            if(existingConnectionsSent.status == "ACCEPTED"){
-                return res.status(400).json({message: "You were already connected"});
-            }else if(existingConnectionsSent.status == "PENDING"){
-                return res.status(400).json({message: "You have already sent a connection request"});
-            }else{
-                return res.status(400).json({message: "Connection Request is rejected"});
-            }
+        if (existingConnection) {
+            return res.status(400).json({ message: 'Connection already exists' });
         }
 
-        const existingConnectionsReceived = await prisma.connection.findFirst({
-            where: {senderId: Number(userId),
-                receiverId: sender.id
-            }
-        });
-
-        if(existingConnectionsReceived){
-            if(existingConnectionsReceived.status == "ACCEPTED"){
-                return res.status(400).json({message: "You were already connected"});
-            }else if(existingConnectionsReceived.status == "PENDING"){
-                return res.status(400).json({message: "You have already received a connection request"});
-            }else{
-                return res.status(400).json({message: "You have rejected the connection request"});
-            }
-        }
-        const newRequest = await prisma.connection.create({
+        // Create connection request
+        const connection = await prisma.connection.create({
             data: {
-                senderId: sender.id,
-                receiverId: Number(userId)
+                sender: {
+                    connect: { id: senderId }
+                },
+                receiver: {
+                    connect: { id: receiverId }
+                },
+                status: 'PENDING'
+            },
+            include: {
+                sender: true,
+                receiver: true
             }
         });
-        
-        return res.json({message: 'Connection request has been sent', newRequest});
+
+        // Create notification for receiver
+        await createNotification(
+            receiverId,
+            'CONNECTION_REQUEST',
+            `${req.user.firstname} ${req.user.lastname} sent you a connection request`
+        );
+
+        res.json(connection);
     }catch(error){
-        console.log(error);
-        res.status(500).json("Server error");
+        console.error('Error sending connection request:', error);
+        res.status(500).json({ message: 'Error sending connection request' });
     }
 }
 
 const acceptConnectionRequest = async(req,res) => {
     try{
-        const { requestId } = req.params;
+        const connectionId = parseInt(req.params.connectionId);
         const userId = req.user.id;
 
-        // Debug logging
-        console.log('=== Accept Connection Request Debug ===');
-        console.log('Request params:', req.params);
-        console.log('Request body:', req.body);
-        console.log('User from request:', req.user);
-        console.log('Request ID:', requestId);
-        console.log('User ID:', userId);
-
-        // Validate request ID
-        if (!requestId) {
-            console.log('No request ID provided');
-            return res.status(400).json({message: "Request ID is required"});
+        if (!connectionId) {
+            return res.status(400).json({ message: 'Connection ID is required' });
         }
 
-        const requestIdNum = Number(requestId);
-        if (isNaN(requestIdNum)) {
-            console.log('Invalid request ID format:', requestId);
-            return res.status(400).json({message: "Invalid request ID format"});
-        }
-
-        // Find the connection request
-        const connectionRequest = await prisma.connection.findFirst({
-            where: {id: requestIdNum}
+        // First verify that this connection exists and belongs to the user
+        const existingConnection = await prisma.connection.findFirst({
+            where: {
+                id: connectionId,
+                receiverId: userId,
+                status: 'PENDING'
+            }
         });
 
-        console.log('Found connection request:', connectionRequest);
-
-        if (!connectionRequest){
-            console.log('No connection request found with ID:', requestId);
-            return res.status(404).json({message: "Connection request not found"});
+        if (!existingConnection) {
+            return res.status(404).json({ message: 'Connection request not found' });
         }
 
-        // Debug ID comparison
-        console.log('ID Comparison:', {
-            connectionReceiverId: connectionRequest.receiverId,
-            userId: userId,
-            receiverIdType: typeof connectionRequest.receiverId,
-            userIdType: typeof userId,
-            receiverIdString: connectionRequest.receiverId.toString(),
-            userIdString: userId.toString()
+        // Update connection status
+        const connection = await prisma.connection.update({
+            where: {
+                id: connectionId
+            },
+            data: {
+                status: 'ACCEPTED'
+            },
+            include: {
+                sender: true,
+                receiver: true
+            }
         });
 
-        // Check authorization
-        if (connectionRequest.receiverId.toString() !== userId.toString()){
-            console.log('Authorization failed:', {
-                connectionReceiverId: connectionRequest.receiverId,
-                userId: userId
-            });
-            return res.status(403).json({
-                message: "Not authorised to accept this request",
-                details: {
-                    connectionReceiverId: connectionRequest.receiverId,
-                    userId: userId
-                }
-            });
-        }
+        // Create notification for sender
+        await createNotification(
+            connection.senderId,
+            'CONNECTION_ACCEPTED',
+            `${req.user.firstname} ${req.user.lastname} accepted your connection request`
+        );
 
-        // Check status
-        if(connectionRequest.status !== "PENDING"){
-            console.log('Request already processed:', {
-                currentStatus: connectionRequest.status
-            });
-            return res.status(400).json({
-                message: "Request already processed",
-                currentStatus: connectionRequest.status
-            });
-        }
-
-        // Update the connection
-        const updatedConnectionRequest = await prisma.connection.update({
-            where: { id: requestIdNum},
-            data: { status: "ACCEPTED"}
-        });
-
-        console.log('Updated connection request:', updatedConnectionRequest);
-        
-        res.status(200).json({
-            message: "Request Accepted", 
-            connection: updatedConnectionRequest
-        });
+        res.json(connection);
     }catch(error) {
-        console.error('Error in acceptConnectionRequest:', error);
-        res.status(500).json({ 
-            message: "Server error",
-            error: error.message 
-        });
+        console.error('Error accepting connection request:', error);
+        res.status(500).json({ message: 'Error accepting connection request' });
     }
 }
  

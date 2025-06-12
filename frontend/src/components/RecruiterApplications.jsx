@@ -46,13 +46,13 @@ const RecruiterApplications = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'PENDING':
-        return 'bg-yellow-100 text-yellow-800';
+        return 'bg-teal-50 text-teal-800 border-teal-200';
       case 'ACCEPTED':
-        return 'bg-green-100 text-green-800';
+        return 'bg-teal-50 text-teal-800 border-teal-200';
       case 'REJECTED':
-        return 'bg-red-100 text-red-800';
+        return 'bg-red-50 text-red-800 border-red-200';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-50 text-gray-800 border-gray-200';
     }
   };
 
@@ -82,7 +82,7 @@ const RecruiterApplications = () => {
                   <h2 className="text-xl font-bold">{application.job.title}</h2>
                   <p className="text-gray-600">Company: {application.job.company}</p>
                 </div>
-                <span className={`px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(application.status)}`}>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(application.status)}`}>
                   {application.status}
                 </span>
               </div>
@@ -106,7 +106,7 @@ const RecruiterApplications = () => {
                   href={`http://localhost:3000${application.resumeUrl}`}
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="text-blue-600 hover:text-blue-800"
+                  className="text-teal-600 hover:text-teal-800"
                 >
                   View Resume
                 </a>
@@ -117,13 +117,13 @@ const RecruiterApplications = () => {
                   <>
                     <button
                       onClick={() => handleStatusUpdate(application.id, 'ACCEPTED')}
-                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+                      className="px-4 py-2 bg-teal-600 text-white rounded hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
                     >
                       Accept
                     </button>
                     <button
                       onClick={() => handleStatusUpdate(application.id, 'REJECTED')}
-                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+                      className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
                     >
                       Reject
                     </button>

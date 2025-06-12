@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
 import JobApplicationForm from '../components/JobApplicationForm';
 import JobList from '../components/Jobs';
+import { useLocation } from 'react-router-dom';
 
 const Jobs = () => {
   const [error, setError] = useState('');
@@ -24,6 +25,14 @@ const Jobs = () => {
   const [showJobForm, setShowJobForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const { user } = useAuth();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Check if we should show the job form from navigation state
+    if (location.state?.showJobForm) {
+      setShowJobForm(true);
+    }
+  }, [location]);
 
   const resetJobForm = () => {
     setNewJob({
@@ -61,7 +70,7 @@ const Jobs = () => {
 
       console.log('Sending job data:', jobData); // Debug log
 
-      if (isEditing) {
+      if (isEditing && selectedJob?.id) {
         // Update existing job
         const response = await axios.put(`http://localhost:3000/api/job/${selectedJob.id}`, jobData, {
           withCredentials: true,
@@ -142,195 +151,197 @@ const Jobs = () => {
         </div>
       )}
 
-      {/* Recruiter Job Posting Form */}
-      {user?.role === 'RECRUITER' && (
-        <div className="mb-8">
-          {!showJobForm ? (
-            <button
-              onClick={() => setShowJobForm(true)}
-              className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            >
-              Post a New Job
-            </button>
-          ) : (
-            <div className="bg-white rounded-lg shadow-lg p-6">
-              <h2 className="text-xl font-bold mb-4">
-                {isEditing ? 'Edit Job Posting' : 'Post a New Job'}
-              </h2>
-              <form onSubmit={handleCreateJob} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Job Title *
-                  </label>
-                  <input
-                    type="text"
-                    value={newJob.title}
-                    onChange={(e) => setNewJob({ ...newJob, title: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    required
-                    placeholder="e.g., Senior Software Engineer"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Company *
-                  </label>
-                  <input
-                    type="text"
-                    value={newJob.company}
-                    onChange={(e) => setNewJob({ ...newJob, company: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    required
-                    placeholder="Your company name"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Location *
-                  </label>
-                  <input
-                    type="text"
-                    value={newJob.location}
-                    onChange={(e) => setNewJob({ ...newJob, location: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    required
-                    placeholder="e.g., New York, NY or Remote"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Job Type *
-                  </label>
-                  <select
-                    value={newJob.type}
-                    onChange={(e) => setNewJob({ ...newJob, type: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  >
-                    <option value="FULL_TIME">Full Time</option>
-                    <option value="PART_TIME">Part Time</option>
-                    <option value="CONTRACT">Contract</option>
-                    <option value="INTERNSHIP">Internship</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description *
-                  </label>
-                  <textarea
-                    value={newJob.description}
-                    onChange={(e) => setNewJob({ ...newJob, description: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    required
-                    rows="4"
-                    placeholder="Describe the job responsibilities and requirements..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Requirements *
-                  </label>
-                  <textarea
-                    value={newJob.requirements}
-                    onChange={(e) => setNewJob({ ...newJob, requirements: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    required
-                    rows="4"
-                    placeholder="List the required qualifications and skills..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Salary
-                  </label>
-                  <input
-                    type="text"
-                    value={newJob.salary}
-                    onChange={(e) => setNewJob({ ...newJob, salary: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="e.g., $80,000 - $100,000"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Skills *
-                  </label>
-                  <input
-                    type="text"
-                    value={newJob.skills}
-                    onChange={(e) => setNewJob({ ...newJob, skills: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    required
-                    placeholder="Enter skills separated by commas (e.g., React, Node.js, Python)"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Experience Level *
-                  </label>
-                  <select
-                    value={newJob.experience}
-                    onChange={(e) => setNewJob({ ...newJob, experience: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    required
-                  >
-                    <option value="">Select Experience Level</option>
-                    <option value="ENTRY">Entry Level</option>
-                    <option value="MID">Mid Level</option>
-                    <option value="SENIOR">Senior Level</option>
-                    <option value="LEAD">Lead Level</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Education *
-                  </label>
-                  <input
-                    type="text"
-                    value={newJob.education}
-                    onChange={(e) => setNewJob({ ...newJob, education: e.target.value })}
-                    className="w-full px-4 py-2 border rounded-md focus:ring-blue-500 focus:border-blue-500"
-                    required
-                    placeholder="e.g., Bachelor's in Computer Science"
-                  />
-                </div>
-
-                <div className="flex justify-end gap-4">
-                  <button
-                    type="button"
-                    onClick={resetJobForm}
-                    className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                  >
-                    {isEditing ? 'Update Job' : 'Post Job'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Job List Component */}
       <JobList 
         onEditJob={handleEditJob} 
         onApply={handleApply} 
         onDeleteJob={handleDeleteJob}
+        onPostNewJob={() => setShowJobForm(true)}
       />
+
+      {/* Job Form Modal */}
+      {showJobForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold">
+                {isEditing ? 'Edit Job Posting' : 'Post a New Job'}
+              </h2>
+              <button
+                onClick={resetJobForm}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <form onSubmit={handleCreateJob} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Job Title *
+                </label>
+                <input
+                  type="text"
+                  value={newJob.title}
+                  onChange={(e) => setNewJob({ ...newJob, title: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
+                  required
+                  placeholder="e.g., Senior Software Engineer"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Company *
+                </label>
+                <input
+                  type="text"
+                  value={newJob.company}
+                  onChange={(e) => setNewJob({ ...newJob, company: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
+                  required
+                  placeholder="Your company name"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Location *
+                </label>
+                <input
+                  type="text"
+                  value={newJob.location}
+                  onChange={(e) => setNewJob({ ...newJob, location: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
+                  required
+                  placeholder="e.g., New York, NY or Remote"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Job Type *
+                </label>
+                <select
+                  value={newJob.type}
+                  onChange={(e) => setNewJob({ ...newJob, type: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
+                  required
+                >
+                  <option value="FULL_TIME">Full Time</option>
+                  <option value="PART_TIME">Part Time</option>
+                  <option value="CONTRACT">Contract</option>
+                  <option value="INTERNSHIP">Internship</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Description *
+                </label>
+                <textarea
+                  value={newJob.description}
+                  onChange={(e) => setNewJob({ ...newJob, description: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
+                  required
+                  rows="4"
+                  placeholder="Describe the job responsibilities and requirements..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Requirements *
+                </label>
+                <textarea
+                  value={newJob.requirements}
+                  onChange={(e) => setNewJob({ ...newJob, requirements: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
+                  required
+                  rows="4"
+                  placeholder="List the required qualifications and skills..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Salary
+                </label>
+                <input
+                  type="text"
+                  value={newJob.salary}
+                  onChange={(e) => setNewJob({ ...newJob, salary: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
+                  placeholder="e.g., $80,000 - $100,000"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Skills *
+                </label>
+                <input
+                  type="text"
+                  value={newJob.skills}
+                  onChange={(e) => setNewJob({ ...newJob, skills: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
+                  required
+                  placeholder="Enter skills separated by commas (e.g., React, Node.js, Python)"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Experience Level *
+                </label>
+                <select
+                  value={newJob.experience}
+                  onChange={(e) => setNewJob({ ...newJob, experience: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
+                  required
+                >
+                  <option value="">Select Experience Level</option>
+                  <option value="ENTRY">Entry Level</option>
+                  <option value="MID">Mid Level</option>
+                  <option value="SENIOR">Senior Level</option>
+                  <option value="LEAD">Lead Level</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Education *
+                </label>
+                <input
+                  type="text"
+                  value={newJob.education}
+                  onChange={(e) => setNewJob({ ...newJob, education: e.target.value })}
+                  className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
+                  required
+                  placeholder="e.g., Bachelor's in Computer Science"
+                />
+              </div>
+
+              <div className="flex justify-end gap-4">
+                <button
+                  type="button"
+                  onClick={resetJobForm}
+                  className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
+                >
+                  {isEditing ? 'Update Job' : 'Post Job'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Application Form Modal */}
       {showApplicationForm && selectedJob && (
