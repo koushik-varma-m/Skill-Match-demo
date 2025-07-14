@@ -3,6 +3,7 @@ const prisma = new PrismaClient();
 const path = require('path');
 const { sendEmail, emailTemplates } = require('../utils/emailService');
 const { createNotification } = require('./notification.controller');
+const axios = require('axios');
 
 const getAllJobPosts = async(req, res) => {
     try {
@@ -664,6 +665,76 @@ const updateApplicationStatus = async(req, res) => {
     }
 }
 
+const calculateMatchScore = async (resume, jobDescription) => {
+  try {
+    const response = await axios.post('http://localhost:8000/match', {
+      resume,
+      job_description: jobDescription
+    });
+    return response.data.match_score;
+  } catch (error) {
+    console.error('Error calculating match score:', error);
+    return null;
+  }
+};
+
+const getJobWithMatchScore = async (req, res) => {
+  try {
+    const { jobId } = req.params;
+    const userId = req.user.id;
+
+    // Get the job
+    const job = await prisma.job.findUnique({
+      where: { id: jobId },
+      include: {
+        company: true,
+        applications: {
+          where: { userId },
+          select: { status: true }
+        }
+      }
+    });
+
+    if (!job) {
+      return res.status(404).json({ message: 'Job not found' });
+    }
+
+    // Get user's profile
+    const userProfile = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        about: true,
+        skills: true,
+        experience: true,
+        education: true
+      }
+    });
+
+    // Calculate match score
+    const resumeText = `
+      About: ${userProfile.about || ''}
+      Skills: ${userProfile.skills?.join(', ') || ''}
+      Experience: ${userProfile.experience?.join('\n') || ''}
+      Education: ${userProfile.education?.join('\n') || ''}
+    `;
+
+    const matchScore = await calculateMatchScore(resumeText, job.description);
+
+    // Add match score to job data
+    const jobWithMatch = {
+      ...job,
+      matchScore: matchScore || 0,
+      hasApplied: job.applications.length > 0,
+      applicationStatus: job.applications[0]?.status || null
+    };
+
+    res.json(jobWithMatch);
+  } catch (error) {
+    console.error('Error in getJobWithMatchScore:', error);
+    res.status(500).json({ message: 'Error fetching job details' });
+  }
+};
+
 module.exports = {
     getAllJobPosts,
     createJob,
@@ -675,5 +746,7 @@ module.exports = {
     applyForJob,
     getMyApplications,
     getRecruiterApplications,
-    updateApplicationStatus
+    updateApplicationStatus,
+    getJobWithMatchScore,
+    calculateMatchScore
 };

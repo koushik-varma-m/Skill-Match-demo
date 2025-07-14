@@ -14,7 +14,8 @@ const {
     applyForJob,
     getMyApplications,
     getRecruiterApplications,
-    updateApplicationStatus
+    updateApplicationStatus,
+    getJobWithMatchScore
 } = require('../controllers/job.controller');
 const router = express.Router();
 
@@ -66,5 +67,6 @@ router.get('/:jobId', authMiddleware, getJobById); // Get specific job details
 router.put('/:jobId', authMiddleware, updateJob); // Update job
 router.delete('/:jobId', authMiddleware, deleteJob); // Delete job
 router.post('/:jobId/apply', authMiddleware, upload.single('resume'), applyForJob); // Apply for a job
+router.get('/:jobId/match', authMiddleware, getJobWithMatchScore); // Get job details with match score
 
 module.exports = router;
