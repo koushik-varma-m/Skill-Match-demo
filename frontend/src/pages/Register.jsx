@@ -12,6 +12,8 @@ const Register = () => {
     role: 'CANDIDATE'
   });
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { register } = useAuth();
 
@@ -21,17 +23,43 @@ const Register = () => {
       ...prev,
       [name]: value
     }));
+    // Clear field error when user starts typing
+    if (fieldErrors[name]) {
+      setFieldErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setFieldErrors({});
+    setIsLoading(true);
 
-    const result = await register(formData);
-    if (result.success) {
-      navigate('/');
-    } else {
-      setError(result.error);
+    try {
+      const result = await register(formData);
+      if (result.success) {
+        navigate('/login');
+      } else {
+        // Handle validation errors
+        if (result.errors && Array.isArray(result.errors)) {
+          const errorsObj = {};
+          result.errors.forEach(err => {
+            errorsObj[err.field] = err.message;
+          });
+          setFieldErrors(errorsObj);
+          setError('Please fix the errors below');
+        } else {
+          setError(result.error || 'Registration failed');
+        }
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -41,8 +69,17 @@ const Register = () => {
         <h2 className="text-2xl font-bold mb-6 text-center">Register</h2>
         
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
+          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded mb-4">
+            <div className="font-semibold mb-1">{error}</div>
+            {Object.keys(fieldErrors).length > 0 && (
+              <ul className="list-disc list-inside mt-2 space-y-1 text-sm">
+                {Object.entries(fieldErrors).map(([field, message]) => (
+                  <li key={field}>
+                    <span className="font-medium capitalize">{field}:</span> {message}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         )}
 
@@ -58,9 +95,13 @@ const Register = () => {
                 name="firstname"
                 value={formData.firstname}
                 onChange={handleChange}
-                className="input-field"
+                className={`input-field ${fieldErrors.firstname ? 'border-red-500 focus:ring-red-400' : ''}`}
                 required
+                disabled={isLoading}
               />
+              {fieldErrors.firstname && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.firstname}</p>
+              )}
             </div>
 
             <div>
@@ -73,9 +114,13 @@ const Register = () => {
                 name="lastname"
                 value={formData.lastname}
                 onChange={handleChange}
-                className="input-field"
+                className={`input-field ${fieldErrors.lastname ? 'border-red-500 focus:ring-red-400' : ''}`}
                 required
+                disabled={isLoading}
               />
+              {fieldErrors.lastname && (
+                <p className="mt-1 text-sm text-red-600">{fieldErrors.lastname}</p>
+              )}
             </div>
           </div>
 
@@ -89,9 +134,13 @@ const Register = () => {
               name="username"
               value={formData.username}
               onChange={handleChange}
-              className="input-field"
+              className={`input-field ${fieldErrors.username ? 'border-red-500 focus:ring-red-400' : ''}`}
               required
+              disabled={isLoading}
             />
+            {fieldErrors.username && (
+              <p className="mt-1 text-sm text-red-600">{fieldErrors.username}</p>
+            )}
           </div>
 
           <div>
@@ -104,9 +153,13 @@ const Register = () => {
               name="email"
               value={formData.email}
               onChange={handleChange}
-              className="input-field"
+              className={`input-field ${fieldErrors.email ? 'border-red-500 focus:ring-red-400' : ''}`}
               required
+              disabled={isLoading}
             />
+            {fieldErrors.email && (
+              <p className="mt-1 text-sm text-red-600">{fieldErrors.email}</p>
+            )}
           </div>
 
           <div>
@@ -119,9 +172,18 @@ const Register = () => {
               name="password"
               value={formData.password}
               onChange={handleChange}
-              className="input-field"
+              className={`input-field ${fieldErrors.password ? 'border-red-500 focus:ring-red-400' : ''}`}
               required
+              disabled={isLoading}
             />
+            {fieldErrors.password && (
+              <p className="mt-1 text-sm text-red-600">{fieldErrors.password}</p>
+            )}
+            {!fieldErrors.password && (
+              <p className="mt-1 text-xs text-gray-500">
+                Password must be at least 8 characters and contain uppercase, lowercase, number, and special character.
+              </p>
+            )}
           </div>
 
           <div>
@@ -134,14 +196,19 @@ const Register = () => {
               value={formData.role}
               onChange={handleChange}
               className="input-field"
+              disabled={isLoading}
             >
               <option value="CANDIDATE">Candidate</option>
               <option value="RECRUITER">Recruiter</option>
             </select>
           </div>
 
-          <button type="submit" className="btn-primary w-full">
-            Register
+          <button 
+            type="submit" 
+            className="btn-primary w-full"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Registering...' : 'Register'}
           </button>
         </form>
       </div>

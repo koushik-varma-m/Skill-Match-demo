@@ -40,11 +40,20 @@ const JobApplicationForm = ({ job, onClose, onSuccess }) => {
       }
 
       const formDataToSend = new FormData();
-      formDataToSend.append('coverLetter', formData.coverLetter);
+      // Only append coverLetter if it's not empty
+      if (formData.coverLetter && formData.coverLetter.trim()) {
+        formDataToSend.append('coverLetter', formData.coverLetter.trim());
+      }
       formDataToSend.append('resume', formData.resume);
-      formDataToSend.append('expectedSalary', formData.expectedSalary);
-      formDataToSend.append('noticePeriod', formData.noticePeriod);
-      formDataToSend.append('availableFrom', formData.availableFrom);
+      if (formData.expectedSalary) {
+        formDataToSend.append('expectedSalary', formData.expectedSalary);
+      }
+      if (formData.noticePeriod) {
+        formDataToSend.append('noticePeriod', formData.noticePeriod);
+      }
+      if (formData.availableFrom) {
+        formDataToSend.append('availableFrom', formData.availableFrom);
+      }
 
       console.log('Sending form data:', {
         coverLetter: formData.coverLetter,
@@ -98,16 +107,15 @@ const JobApplicationForm = ({ job, onClose, onSuccess }) => {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Cover Letter *
+              Cover Letter
             </label>
             <textarea
               name="coverLetter"
               value={formData.coverLetter}
               onChange={handleChange}
-              required
               rows="6"
               className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
-              placeholder="Explain why you're a good fit for this role..."
+              placeholder="Explain why you're a good fit for this role (optional)..."
             />
           </div>
 

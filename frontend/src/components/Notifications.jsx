@@ -6,6 +6,7 @@ const Notifications = () => {
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [deleteError, setDeleteError] = useState(null);
 
   const fetchNotifications = async () => {
     try {
@@ -49,13 +50,28 @@ const Notifications = () => {
   };
 
   const deleteNotification = async (notificationId) => {
+    // Validate notificationId
+    if (!notificationId) {
+      console.error('Invalid notification ID:', notificationId);
+      setDeleteError('Invalid notification ID');
+      setTimeout(() => setDeleteError(null), 3000);
+      return;
+    }
+
     try {
-      await axios.delete(`http://localhost:3000/api/notifications/${notificationId}`, {
+      setDeleteError(null);
+      const response = await axios.delete(`http://localhost:3000/api/notifications/${notificationId}`, {
         withCredentials: true,
       });
+      // Remove from local state
       setNotifications(notifications.filter(notification => notification.id !== notificationId));
     } catch (err) {
       console.error('Error deleting notification:', err);
+      console.error('Notification ID:', notificationId);
+      console.error('Error response:', err.response?.data);
+      setDeleteError(err.response?.data?.message || 'Failed to delete notification');
+      // Clear error after 3 seconds
+      setTimeout(() => setDeleteError(null), 3000);
     }
   };
 
@@ -92,6 +108,12 @@ const Notifications = () => {
           </button>
         )}
       </div>
+
+      {deleteError && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded-md">
+          {deleteError}
+        </div>
+      )}
 
       {notifications.length === 0 ? (
         <div className="text-center text-gray-500 py-8">

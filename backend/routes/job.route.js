@@ -15,15 +15,14 @@ const {
     getMyApplications,
     getRecruiterApplications,
     updateApplicationStatus,
-    getJobWithMatchScore
+    getJobWithMatchScore,
+    findMatchingJobs
 } = require('../controllers/job.controller');
 const router = express.Router();
 
-// Configure multer for resume uploads
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         const uploadDir = path.join(__dirname, '..', 'uploads', 'resumes');
-        // Create directory if it doesn't exist
         if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir, { recursive: true });
         }
@@ -38,10 +37,9 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB limit
+        fileSize: 5 * 1024 * 1024 
     },
     fileFilter: function (req, file, cb) {
-        // Accept PDF, DOC, and DOCX files
         if (!file.originalname.match(/\.(pdf|doc|docx)$/)) {
             return cb(new Error('Only PDF, DOC, and DOCX files are allowed!'), false);
         }
@@ -49,24 +47,24 @@ const upload = multer({
     }
 });
 
-// Public routes
-router.get('/', authMiddleware, getJobs); // Get all active jobs
-router.get('/all', getAllJobPosts); // Get all jobs (including inactive)
 
-// Candidate routes
-router.get('/applications', authMiddleware, getMyApplications); // Get user's applications
+router.get('/', authMiddleware, getJobs); 
+router.get('/all', getAllJobPosts); 
 
-// Recruiter routes
-router.post('/', authMiddleware, createJob); // Create new job
-router.get('/recruiter/jobs', authMiddleware, getJobsByRecruiter); // Get jobs posted by recruiter
-router.get('/recruiter/applications', authMiddleware, getRecruiterApplications); // Get applications for recruiter's jobs
-router.put('/applications/:applicationId/status', authMiddleware, updateApplicationStatus); // Update application status
+router.get('/applications', authMiddleware, getMyApplications); 
+router.get('/matching', authMiddleware, findMatchingJobs); 
 
-// Job-specific routes
-router.get('/:jobId', authMiddleware, getJobById); // Get specific job details
-router.put('/:jobId', authMiddleware, updateJob); // Update job
-router.delete('/:jobId', authMiddleware, deleteJob); // Delete job
-router.post('/:jobId/apply', authMiddleware, upload.single('resume'), applyForJob); // Apply for a job
-router.get('/:jobId/match', authMiddleware, getJobWithMatchScore); // Get job details with match score
+
+router.post('/', authMiddleware, createJob); 
+router.get('/recruiter/jobs', authMiddleware, getJobsByRecruiter); 
+router.get('/recruiter/applications', authMiddleware, getRecruiterApplications); 
+router.put('/applications/:applicationId/status', authMiddleware, updateApplicationStatus); 
+
+
+router.get('/:jobId', authMiddleware, getJobById); 
+router.put('/:jobId', authMiddleware, updateJob); 
+router.delete('/:jobId', authMiddleware, deleteJob); 
+router.post('/:jobId/apply', authMiddleware, upload.single('resume'), applyForJob); 
+router.get('/:jobId/match', authMiddleware, getJobWithMatchScore); 
 
 module.exports = router;

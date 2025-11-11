@@ -12,6 +12,7 @@ import CandidateDashboard from './pages/CandidateDashboard';
 import RecruiterDashboard from './pages/RecruiterDashboard';
 import MyApplications from './components/MyApplications';
 import RecruiterApplications from './components/RecruiterApplications';
+import JobDetails from './pages/JobDetails';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 import Notifications from './components/Notifications';
@@ -74,6 +75,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <Jobs />
+                  </PrivateRoute>
+                } 
+              />
+              <Route 
+                path="/jobs/:jobId" 
+                element={
+                  <PrivateRoute>
+                    <JobDetails />
                   </PrivateRoute>
                 } 
               />

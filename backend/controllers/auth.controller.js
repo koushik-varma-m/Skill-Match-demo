@@ -16,7 +16,8 @@ const createUser = async (req,res) => {
         });
         if(existingEmail){
             res.status(409).json({
-                message: "Email already exists"
+                message: "Email already exists",
+                error: "Email already exists"
             });
             return;
         }
@@ -27,14 +28,18 @@ const createUser = async (req,res) => {
         });
         if(existingUsername){
             res.status(409).json({
-                message: "Username already exists"
+                message: "Username already exists",
+                error: "Username already exists"
             });
             return;
         }
         
         bcrypt.hash(password, saltRounds, async function(err, hash){
             if (err) {
-                res.status(500).json({ error: 'Error hashing password' });
+                res.status(500).json({ 
+                    message: 'Error hashing password',
+                    error: 'Error hashing password'
+                });
                 return;
             }
             
@@ -64,18 +69,40 @@ const createUser = async (req,res) => {
                 });
             } catch (error) {
                 console.error('Error creating user:', error);
-                res.status(500).json({ error: 'Error creating user' });
+                res.status(500).json({ 
+                    message: 'Error creating user',
+                    error: error.message || 'Error creating user'
+                });
             }
         });
     } catch (error) {
         console.error('Validation error:', error);
-        res.status(400).json({ error: 'Invalid input data' });
+        
+        // Handle Zod validation errors
+        if (error.name === 'ZodError') {
+            const validationErrors = error.errors.map(err => ({
+                field: err.path.join('.'),
+                message: err.message
+            }));
+            
+            res.status(400).json({ 
+                message: 'Validation failed',
+                errors: validationErrors,
+                error: validationErrors.map(e => `${e.field}: ${e.message}`).join(', ')
+            });
+            return;
+        }
+        
+        res.status(400).json({ 
+            message: 'Invalid input data',
+            error: error.message || 'Invalid input data'
+        });
     }
 }
 
 const loginUser = async (req,res) => {
-    const { email, password } = userSignin.parse(req.body);
-    try{
+    try {
+        const { email, password } = userSignin.parse(req.body);
         const user = await prisma.user.findUnique({
             where: { email },
             select: {
@@ -91,7 +118,8 @@ const loginUser = async (req,res) => {
 
         if (!user) {
             res.status(401).json({
-                message: "Invalid email or password"
+                message: "Invalid email or password",
+                error: "Invalid email or password"
             });
             return;
         }
@@ -99,7 +127,10 @@ const loginUser = async (req,res) => {
         bcrypt.compare(password, user.password, function(err, result) {
             if (err) {
                 console.error('Password comparison error:', err);
-                res.status(500).json({ error: 'Error during login' });
+                res.status(500).json({ 
+                    message: 'Error during login',
+                    error: 'Error during login'
+                });
                 return;
             }
 
@@ -113,13 +144,33 @@ const loginUser = async (req,res) => {
                 });
             } else {
                 res.status(401).json({
-                    message: "Invalid email or password"
+                    message: "Invalid email or password",
+                    error: "Invalid email or password"
                 });
         }
         });
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ error: 'Error during login' });
+        
+        // Handle Zod validation errors
+        if (error.name === 'ZodError') {
+            const validationErrors = error.errors.map(err => ({
+                field: err.path.join('.'),
+                message: err.message
+            }));
+            
+            res.status(400).json({ 
+                message: 'Validation failed',
+                errors: validationErrors,
+                error: validationErrors.map(e => `${e.field}: ${e.message}`).join(', ')
+            });
+            return;
+        }
+        
+        res.status(500).json({ 
+            message: 'Error during login',
+            error: error.message || 'Error during login'
+        });
     }
 }
 

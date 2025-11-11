@@ -35,10 +35,14 @@ const PostJob = () => {
     setError('');
 
     try {
-      // Convert skills string to array
+      // Convert skills string to array (handle empty string)
+      const skillsArray = formData.skills && formData.skills.trim() 
+        ? formData.skills.split(',').map(skill => skill.trim()).filter(skill => skill !== '')
+        : [];
+      
       const jobData = {
         ...formData,
-        skills: formData.skills.split(',').map(skill => skill.trim()),
+        skills: skillsArray,
         recruiterId: user.id
       };
 
@@ -194,14 +198,13 @@ const PostJob = () => {
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Required Skills *
+            Skills
           </label>
           <input
             type="text"
             name="skills"
             value={formData.skills}
             onChange={handleChange}
-            required
             className="input-field w-full"
             placeholder="e.g., JavaScript, React, Node.js (comma-separated)"
           />

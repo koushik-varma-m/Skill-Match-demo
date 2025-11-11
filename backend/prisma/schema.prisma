@@ -35,9 +35,45 @@ model Profile {
   profilePicture String?
   about          String?
   skills         String[]
-  experience     String[]
-  education      String[]
+  experience     String[]  // Keep for backward compatibility, will be deprecated
+  education      String[]  // Keep for backward compatibility, will be deprecated
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  experiences    Experience[]
+  educations    Education[]
+}
+
+model Experience {
+  id          Int      @id @default(autoincrement())
+  profileId   Int
+  company     String
+  description String
+  fromMonth   Int      // 1-12
+  fromYear    Int
+  toMonth     Int?     // 1-12, null if current
+  toYear      Int?     // null if current
+  isCurrent   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
+}
+
+model Education {
+  id          Int      @id @default(autoincrement())
+  profileId   Int
+  institution String
+  description String
+  fromMonth   Int      // 1-12
+  fromYear    Int
+  toMonth     Int?     // 1-12, null if current
+  toYear      Int?     // null if current
+  isCurrent   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  profile     Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId])
 }
 
 model Post {
@@ -100,7 +136,7 @@ model JobApplication {
   id            Int      @id @default(autoincrement())
   jobId         Int
   candidateId   Int
-  coverLetter   String
+  coverLetter   String?
   resumePath    String
   expectedSalary String?
   noticePeriod  String?

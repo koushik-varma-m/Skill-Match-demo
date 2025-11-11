@@ -51,11 +51,11 @@ const createJob = async (req, res) => {
                 ? requirements 
                 : [];
 
-        // Convert skills to array if it's a string
+        // Convert skills to array if it's a string (handle empty string)
         const skillsArray = typeof skills === 'string'
-            ? skills.split(',').map(skill => skill.trim())
+            ? skills.trim() ? skills.split(',').map(skill => skill.trim()).filter(skill => skill !== '') : []
             : Array.isArray(skills)
-                ? skills
+                ? skills.filter(skill => skill && skill.trim() !== '')
                 : [];
 
         const jobData = {
@@ -194,6 +194,8 @@ const getJobs = async (req, res) => {
 const getJobById = async (req, res) => {
   try {
     const { jobId } = req.params;
+    const userId = req.user?.id;
+    
     const job = await prisma.job.findUnique({
       where: {
         id: Number(jobId)
@@ -210,9 +212,18 @@ const getJobById = async (req, res) => {
               }
             }
           }
-        }
-            }
-        });
+        },
+        applications: req.user?.role === 'CANDIDATE' && userId ? {
+          where: {
+            candidateId: userId
+          },
+          select: {
+            status: true,
+            id: true
+          }
+        } : false
+      }
+    });
 
     if (!job) {
       return res.status(404).json({
@@ -281,16 +292,27 @@ const updateJob = async (req, res) => {
       });
     }
 
-    // Process the update data
-    const updateData = {
-      ...req.body,
-      skills: Array.isArray(req.body.skills) ? req.body.skills : [req.body.skills]
-    };
+    // Process the update data - handle skills conversion
+    const updateData = { ...req.body };
+    
+    // Only update skills if provided
+    if (req.body.skills !== undefined) {
+      if (typeof req.body.skills === 'string') {
+        updateData.skills = req.body.skills.trim() 
+          ? req.body.skills.split(',').map(skill => skill.trim()).filter(skill => skill !== '')
+          : [];
+      } else if (Array.isArray(req.body.skills)) {
+        updateData.skills = req.body.skills.filter(skill => skill && (typeof skill === 'string' ? skill.trim() !== '' : skill));
+      } else {
+        updateData.skills = [];
+      }
+    }
+    // If skills is not provided, it won't be in updateData, so existing skills will be preserved
 
     console.log('Processed update data:', updateData);
 
-    // Validate required fields
-    const requiredFields = ['title', 'company', 'location', 'type', 'description', 'requirements', 'skills', 'experience', 'education'];
+    // Validate required fields (skills is now optional)
+    const requiredFields = ['title', 'company', 'location', 'type', 'description', 'requirements', 'experience', 'education'];
     const missingFields = requiredFields.filter(field => !updateData[field]);
 
     if (missingFields.length > 0) {
@@ -448,17 +470,23 @@ const applyForJob = async(req, res) => {
         }
 
         // Prepare application data
+        // Handle coverLetter - it's optional
+        let coverLetterValue = null;
+        if (req.body.coverLetter && typeof req.body.coverLetter === 'string' && req.body.coverLetter.trim()) {
+            coverLetterValue = req.body.coverLetter.trim();
+        }
+        
         const applicationData = {
             jobId: Number(jobId),
             candidateId: req.user.id,
-            coverLetter: req.body.coverLetter,
             resumePath: resume.filename,
-            expectedSalary: req.body.expectedSalary || null,
-            noticePeriod: req.body.noticePeriod || null,
+            coverLetter: coverLetterValue, // Explicitly set to null if not provided
+            expectedSalary: (req.body.expectedSalary && req.body.expectedSalary.trim()) ? req.body.expectedSalary.trim() : null,
+            noticePeriod: (req.body.noticePeriod && req.body.noticePeriod.trim()) ? req.body.noticePeriod.trim() : null,
             status: 'PENDING'
         };
 
-        // Only add availableFrom if it's provided and valid
+
         if (req.body.availableFrom && req.body.availableFrom.trim() !== '') {
             const availableFromDate = new Date(req.body.availableFrom);
             if (!isNaN(availableFromDate.getTime())) {
@@ -685,11 +713,22 @@ const getJobWithMatchScore = async (req, res) => {
 
     // Get the job
     const job = await prisma.job.findUnique({
-      where: { id: jobId },
+      where: { id: Number(jobId) },
       include: {
-        company: true,
+        recruiter: {
+          select: {
+            firstname: true,
+            lastname: true,
+            email: true,
+            profile: {
+              select: {
+                profilePicture: true
+              }
+            }
+          }
+        },
         applications: {
-          where: { userId },
+          where: { candidateId: userId },
           select: { status: true }
         }
       }
@@ -710,20 +749,25 @@ const getJobWithMatchScore = async (req, res) => {
       }
     });
 
-    // Calculate match score
-    const resumeText = `
-      About: ${userProfile.about || ''}
-      Skills: ${userProfile.skills?.join(', ') || ''}
-      Experience: ${userProfile.experience?.join('\n') || ''}
-      Education: ${userProfile.education?.join('\n') || ''}
-    `;
-
-    const matchScore = await calculateMatchScore(resumeText, job.description);
+    // Calculate match score using fallback method
+    let matchScore = 0;
+    try {
+      const resumeText = `
+        About: ${userProfile.about || ''}
+        Skills: ${userProfile.skills?.join(', ') || ''}
+        Experience: ${userProfile.experience?.join('\n') || ''}
+        Education: ${userProfile.education?.join('\n') || ''}
+      `;
+      matchScore = await calculateMatchScore(resumeText, job.description) || 0;
+    } catch (error) {
+      console.error('Error calculating match score:', error);
+      matchScore = 0;
+    }
 
     // Add match score to job data
     const jobWithMatch = {
       ...job,
-      matchScore: matchScore || 0,
+      matchScore: matchScore,
       hasApplied: job.applications.length > 0,
       applicationStatus: job.applications[0]?.status || null
     };
@@ -732,6 +776,55 @@ const getJobWithMatchScore = async (req, res) => {
   } catch (error) {
     console.error('Error in getJobWithMatchScore:', error);
     res.status(500).json({ message: 'Error fetching job details' });
+  }
+};
+
+const findMatchingJobs = async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Find matching jobs - basic job search
+    const jobs = await prisma.job.findMany({
+      include: {
+        recruiter: {
+          select: {
+            firstname: true,
+            lastname: true,
+            email: true,
+            profile: {
+              select: {
+                profilePicture: true
+              }
+            }
+          }
+        },
+        applications: {
+          where: { candidateId: userId },
+          select: { status: true }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const transformedJobs = jobs.map(job => ({
+      ...job,
+      matchingScore: 0,
+      matchedSkills: [],
+      summary: 'Basic job search',
+      applicationStatus: job.applications[0]?.status || null,
+      applications: undefined
+    }));
+
+    res.json({
+      message: 'Jobs found successfully',
+      jobs: transformedJobs
+    });
+  } catch (error) {
+    console.error('Error in findMatchingJobs:', error);
+    res.status(500).json({ 
+      message: 'Error finding matching jobs',
+      error: error.message 
+    });
   }
 };
 
@@ -748,5 +841,6 @@ module.exports = {
     getRecruiterApplications,
     updateApplicationStatus,
     getJobWithMatchScore,
-    calculateMatchScore
+    calculateMatchScore,
+    findMatchingJobs
 };

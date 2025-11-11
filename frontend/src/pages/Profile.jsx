@@ -24,7 +24,18 @@ const Profile = () => {
       });
       
       // Handle both response formats
-      const profileData = userId ? response.data.user : response.data;
+      let profileData = userId ? response.data.user : response.data;
+      
+      // If profile has nested profile object, extract it
+      if (profileData.profile) {
+        profileData = {
+          ...profileData,
+          ...profileData.profile,
+          experiences: profileData.profile.experiences || [],
+          educations: profileData.profile.educations || []
+        };
+      }
+      
       setProfile(profileData);
     } catch (err) {
       setError('Failed to load profile');
@@ -116,17 +127,61 @@ const Profile = () => {
           </div>
 
           <div>
-            <h2 className="text-lg font-semibold mb-2">Experience</h2>
-            <p className="text-gray-700">
-              {profile.experience || 'No experience listed'}
-            </p>
+            <h2 className="text-lg font-semibold mb-4">Experience</h2>
+            {profile.experiences && profile.experiences.length > 0 ? (
+              <div className="space-y-4">
+                {profile.experiences.map((exp) => {
+                  const months = [
+                    'January', 'February', 'March', 'April', 'May', 'June',
+                    'July', 'August', 'September', 'October', 'November', 'December'
+                  ];
+                  const formatDate = (month, year) => {
+                    if (!month || !year) return '';
+                    return `${months[month - 1]} ${year}`;
+                  };
+                  return (
+                    <div key={exp.id} className="p-4 border rounded-lg bg-gray-50">
+                      <h3 className="font-semibold text-lg text-gray-900">{exp.company}</h3>
+                      <p className="text-gray-700 mt-2">{exp.description}</p>
+                      <p className="text-gray-600 text-sm mt-2">
+                        {formatDate(exp.fromMonth, exp.fromYear)} - {exp.isCurrent ? 'Present' : formatDate(exp.toMonth, exp.toYear)}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-gray-500">No experience listed</p>
+            )}
           </div>
 
           <div>
-            <h2 className="text-lg font-semibold mb-2">Education</h2>
-            <p className="text-gray-700">
-              {profile.education || 'No education listed'}
-            </p>
+            <h2 className="text-lg font-semibold mb-4">Education</h2>
+            {profile.educations && profile.educations.length > 0 ? (
+              <div className="space-y-4">
+                {profile.educations.map((edu) => {
+                  const months = [
+                    'January', 'February', 'March', 'April', 'May', 'June',
+                    'July', 'August', 'September', 'October', 'November', 'December'
+                  ];
+                  const formatDate = (month, year) => {
+                    if (!month || !year) return '';
+                    return `${months[month - 1]} ${year}`;
+                  };
+                  return (
+                    <div key={edu.id} className="p-4 border rounded-lg bg-gray-50">
+                      <h3 className="font-semibold text-lg text-gray-900">{edu.institution}</h3>
+                      <p className="text-gray-700 mt-2">{edu.description}</p>
+                      <p className="text-gray-600 text-sm mt-2">
+                        {formatDate(edu.fromMonth, edu.fromYear)} - {edu.isCurrent ? 'Present' : formatDate(edu.toMonth, edu.toYear)}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-gray-500">No education listed</p>
+            )}
           </div>
         </div>
       </div>

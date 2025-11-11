@@ -66,9 +66,23 @@ const getProfile = async(req, res) => {
             });
         }
 
-        // Get profile data
+        // Get profile data with experiences and educations
     const profile = await prisma.profile.findUnique({
-            where: { userId: userId }
+            where: { userId: userId },
+            include: {
+                experiences: {
+                    orderBy: [
+                        { fromYear: 'desc' },
+                        { fromMonth: 'desc' }
+                    ]
+                },
+                educations: {
+                    orderBy: [
+                        { fromYear: 'desc' },
+                        { fromMonth: 'desc' }
+                    ]
+                }
+            }
         });
 
         // Combine user and profile data, with default values for profile fields
@@ -77,8 +91,10 @@ const getProfile = async(req, res) => {
             profilePicture: profile?.profilePicture || null,
             about: profile?.about || null,
             skills: profile?.skills || [],
-            experience: profile?.experience || [],
-            education: profile?.education || []
+            experience: profile?.experience || [], // Keep for backward compatibility
+            education: profile?.education || [], // Keep for backward compatibility
+            experiences: profile?.experiences || [],
+            educations: profile?.educations || []
         });
     } catch (error) {
         console.error('Error fetching profile:', error);
@@ -174,14 +190,35 @@ const updateProfile = async(req, res) => {
 
         console.log('User data retrieved:', user);
 
+        // Get updated profile with experiences and educations
+        const updatedProfile = await prisma.profile.findUnique({
+            where: { userId: userId },
+            include: {
+                experiences: {
+                    orderBy: [
+                        { fromYear: 'desc' },
+                        { fromMonth: 'desc' }
+                    ]
+                },
+                educations: {
+                    orderBy: [
+                        { fromYear: 'desc' },
+                        { fromMonth: 'desc' }
+                    ]
+                }
+            }
+        });
+
         // Combine user and profile data in response
     res.json({
             ...user,
-            profilePicture: profile.profilePicture,
-            about: profile.about,
-            skills: profile.skills,
-            experience: profile.experience,
-            education: profile.education
+            profilePicture: updatedProfile.profilePicture,
+            about: updatedProfile.about,
+            skills: updatedProfile.skills,
+            experience: updatedProfile.experience,
+            education: updatedProfile.education,
+            experiences: updatedProfile.experiences || [],
+            educations: updatedProfile.educations || []
         });
     } catch (error) {
         console.error('Detailed error in updateProfile:', {
@@ -242,7 +279,19 @@ const getUserById = async (req, res) => {
                         about: true,
                         skills: true,
                         experience: true,
-                        education: true
+                        education: true,
+                        experiences: {
+                            orderBy: [
+                                { fromYear: 'desc' },
+                                { fromMonth: 'desc' }
+                            ]
+                        },
+                        educations: {
+                            orderBy: [
+                                { fromYear: 'desc' },
+                                { fromMonth: 'desc' }
+                            ]
+                        }
                     }
                 }
             }
@@ -359,30 +408,38 @@ const getSuggestions = async (req, res) => {
 
         console.log('Current user skills:', currentUser.profile?.skills);
 
-        // Get current user's connections
+        // Get all connections (any status) for current user to exclude from suggestions
         const userConnections = await prisma.connection.findMany({
             where: {
                 OR: [
                     { senderId: currentUserId },
                     { receiverId: currentUserId }
-                ],
-                status: 'ACCEPTED'
+                ]
+            },
+            select: {
+                id: true,
+                senderId: true,
+                receiverId: true,
+                status: true
             }
         });
 
-        const connectedUserIds = userConnections.map(conn => 
+        console.log('All connections for user', currentUserId, ':', userConnections.length, userConnections);
+
+        // Get all user IDs that have any connection status with current user
+        const excludedUserIds = userConnections.map(conn => 
             conn.senderId === currentUserId ? conn.receiverId : conn.senderId
         );
 
-        console.log('Connected user IDs:', connectedUserIds);
+        console.log('Excluded user IDs (any connection status):', excludedUserIds);
 
-        // Get all users except current user and connected users
+        // Build list of all IDs to exclude (current user + users with any connection)
+        const allExcludedIds = [currentUserId, ...excludedUserIds];
+
+        // Get all users except current user and users with any connection status
         const users = await prisma.user.findMany({
             where: {
-                AND: [
-                    { id: { not: currentUserId } },
-                    { id: { notIn: connectedUserIds } }
-                ]
+                id: { notIn: allExcludedIds }
             },
             select: {
                 id: true,
@@ -443,6 +500,406 @@ const getSuggestions = async (req, res) => {
     }
 };
 
+// Experience CRUD operations
+const createExperience = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { company, description, fromMonth, fromYear, toMonth, toYear, isCurrent } = req.body;
+
+        console.log('=== Create Experience Debug ===');
+        console.log('User ID:', userId);
+        console.log('Request body:', req.body);
+        console.log('Company:', company);
+        console.log('Description:', description);
+        console.log('FromMonth:', fromMonth, typeof fromMonth);
+        console.log('FromYear:', fromYear, typeof fromYear);
+        console.log('ToMonth:', toMonth, typeof toMonth);
+        console.log('ToYear:', toYear, typeof toYear);
+        console.log('IsCurrent:', isCurrent, typeof isCurrent);
+
+        // Validate required fields
+        if (!company || !description) {
+            return res.status(400).json({
+                message: "Company and description are required"
+            });
+        }
+
+        if (!fromMonth || !fromYear) {
+            return res.status(400).json({
+                message: "From month and year are required"
+            });
+        }
+
+        // Parse and validate month range (1-12)
+        const parsedFromMonth = Number.parseInt(fromMonth, 10);
+        const parsedFromYear = Number.parseInt(fromYear, 10);
+        const parsedToMonth = toMonth ? Number.parseInt(toMonth, 10) : null;
+        const parsedToYear = toYear ? Number.parseInt(toYear, 10) : null;
+
+        if (Number.isNaN(parsedFromMonth) || parsedFromMonth < 1 || parsedFromMonth > 12) {
+            return res.status(400).json({
+                message: "From month must be between 1 and 12"
+            });
+        }
+
+        if (Number.isNaN(parsedFromYear) || parsedFromYear < 1900 || parsedFromYear > 2100) {
+            return res.status(400).json({
+                message: "From year must be a valid year"
+            });
+        }
+
+        if (parsedToMonth !== null && (Number.isNaN(parsedToMonth) || parsedToMonth < 1 || parsedToMonth > 12)) {
+            return res.status(400).json({
+                message: "To month must be between 1 and 12"
+            });
+        }
+
+        // Get or create profile
+        let profile = await prisma.profile.findUnique({
+            where: { userId }
+        });
+
+        if (!profile) {
+            profile = await prisma.profile.create({
+                data: { userId }
+            });
+        }
+
+        console.log('Profile ID:', profile.id);
+
+        const experienceData = {
+            profileId: profile.id,
+            company: company.trim(),
+            description: description.trim(),
+            fromMonth: parsedFromMonth,
+            fromYear: parsedFromYear,
+            toMonth: parsedToMonth,
+            toYear: parsedToYear,
+            isCurrent: isCurrent === true || isCurrent === 'true'
+        };
+
+        console.log('Experience data to create:', experienceData);
+
+        const experience = await prisma.experience.create({
+            data: experienceData
+        });
+
+        console.log('Experience created successfully:', experience);
+        res.status(201).json(experience);
+    } catch (error) {
+        console.error('Error creating experience:', error);
+        console.error('Error stack:', error.stack);
+        res.status(500).json({
+            message: "Error creating experience",
+            error: error.message
+        });
+    }
+};
+
+const updateExperience = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const experienceId = parseInt(req.params.id);
+        const { company, description, fromMonth, fromYear, toMonth, toYear, isCurrent } = req.body;
+
+        if (isNaN(experienceId)) {
+            return res.status(400).json({
+                message: "Invalid experience ID"
+            });
+        }
+
+        // Verify ownership
+        const profile = await prisma.profile.findUnique({
+            where: { userId }
+        });
+
+        if (!profile) {
+            return res.status(404).json({
+                message: "Profile not found"
+            });
+        }
+
+        const existingExperience = await prisma.experience.findFirst({
+            where: {
+                id: experienceId,
+                profileId: profile.id
+            }
+        });
+
+        if (!existingExperience) {
+            return res.status(404).json({
+                message: "Experience not found"
+            });
+        }
+
+        // Parse and validate month range
+        const parsedFromMonth = fromMonth !== undefined ? Number.parseInt(fromMonth, 10) : existingExperience.fromMonth;
+        const parsedFromYear = fromYear !== undefined ? Number.parseInt(fromYear, 10) : existingExperience.fromYear;
+        const parsedToMonth = toMonth !== undefined ? (toMonth ? Number.parseInt(toMonth, 10) : null) : existingExperience.toMonth;
+        const parsedToYear = toYear !== undefined ? (toYear ? Number.parseInt(toYear, 10) : null) : existingExperience.toYear;
+
+        if (parsedFromMonth !== undefined && (Number.isNaN(parsedFromMonth) || parsedFromMonth < 1 || parsedFromMonth > 12)) {
+            return res.status(400).json({
+                message: "From month must be between 1 and 12"
+            });
+        }
+
+        if (parsedToMonth !== null && parsedToMonth !== undefined && (Number.isNaN(parsedToMonth) || parsedToMonth < 1 || parsedToMonth > 12)) {
+            return res.status(400).json({
+                message: "To month must be between 1 and 12"
+            });
+        }
+
+        const updateData = {
+            company: company !== undefined ? company.trim() : existingExperience.company,
+            description: description !== undefined ? description.trim() : existingExperience.description,
+            fromMonth: parsedFromMonth,
+            fromYear: parsedFromYear,
+            toMonth: parsedToMonth,
+            toYear: parsedToYear,
+            isCurrent: isCurrent !== undefined ? (isCurrent === true || isCurrent === 'true') : existingExperience.isCurrent
+        };
+
+        console.log('Updating experience with data:', updateData);
+
+        const updatedExperience = await prisma.experience.update({
+            where: { id: experienceId },
+            data: updateData
+        });
+
+        res.json(updatedExperience);
+    } catch (error) {
+        console.error('Error updating experience:', error);
+        res.status(500).json({
+            message: "Error updating experience",
+            error: error.message
+        });
+    }
+};
+
+const deleteExperience = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const experienceId = parseInt(req.params.id);
+
+        if (isNaN(experienceId)) {
+            return res.status(400).json({
+                message: "Invalid experience ID"
+            });
+        }
+
+        // Verify ownership
+        const profile = await prisma.profile.findUnique({
+            where: { userId }
+        });
+
+        if (!profile) {
+            return res.status(404).json({
+                message: "Profile not found"
+            });
+        }
+
+        const experience = await prisma.experience.findFirst({
+            where: {
+                id: experienceId,
+                profileId: profile.id
+            }
+        });
+
+        if (!experience) {
+            return res.status(404).json({
+                message: "Experience not found"
+            });
+        }
+
+        await prisma.experience.delete({
+            where: { id: experienceId }
+        });
+
+        res.json({
+            message: "Experience deleted successfully"
+        });
+    } catch (error) {
+        console.error('Error deleting experience:', error);
+        res.status(500).json({
+            message: "Error deleting experience",
+            error: error.message
+        });
+    }
+};
+
+// Education CRUD operations
+const createEducation = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { institution, description, fromMonth, fromYear, toMonth, toYear, isCurrent } = req.body;
+
+        // Validate required fields
+        if (!institution || !description || !fromMonth || !fromYear) {
+            return res.status(400).json({
+                message: "Institution, description, fromMonth, and fromYear are required"
+            });
+        }
+
+        // Validate month range (1-12)
+        if (fromMonth < 1 || fromMonth > 12 || (toMonth && (toMonth < 1 || toMonth > 12))) {
+            return res.status(400).json({
+                message: "Month must be between 1 and 12"
+            });
+        }
+
+        // Get or create profile
+        let profile = await prisma.profile.findUnique({
+            where: { userId }
+        });
+
+        if (!profile) {
+            profile = await prisma.profile.create({
+                data: { userId }
+            });
+        }
+
+        const education = await prisma.education.create({
+            data: {
+                profileId: profile.id,
+                institution,
+                description,
+                fromMonth: parseInt(fromMonth),
+                fromYear: parseInt(fromYear),
+                toMonth: toMonth ? parseInt(toMonth) : null,
+                toYear: toYear ? parseInt(toYear) : null,
+                isCurrent: isCurrent === true || isCurrent === 'true'
+            }
+        });
+
+        res.status(201).json(education);
+    } catch (error) {
+        console.error('Error creating education:', error);
+        res.status(500).json({
+            message: "Error creating education",
+            error: error.message
+        });
+    }
+};
+
+const updateEducation = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const educationId = parseInt(req.params.id);
+        const { institution, description, fromMonth, fromYear, toMonth, toYear, isCurrent } = req.body;
+
+        if (isNaN(educationId)) {
+            return res.status(400).json({
+                message: "Invalid education ID"
+            });
+        }
+
+        // Verify ownership
+        const profile = await prisma.profile.findUnique({
+            where: { userId }
+        });
+
+        if (!profile) {
+            return res.status(404).json({
+                message: "Profile not found"
+            });
+        }
+
+        const existingEducation = await prisma.education.findFirst({
+            where: {
+                id: educationId,
+                profileId: profile.id
+            }
+        });
+
+        if (!existingEducation) {
+            return res.status(404).json({
+                message: "Education not found"
+            });
+        }
+
+        // Validate month range
+        if (fromMonth && (fromMonth < 1 || fromMonth > 12) || 
+            (toMonth && (toMonth < 1 || toMonth > 12))) {
+            return res.status(400).json({
+                message: "Month must be between 1 and 12"
+            });
+        }
+
+        const updatedEducation = await prisma.education.update({
+            where: { id: educationId },
+            data: {
+                institution: institution || existingEducation.institution,
+                description: description || existingEducation.description,
+                fromMonth: fromMonth ? parseInt(fromMonth) : existingEducation.fromMonth,
+                fromYear: fromYear ? parseInt(fromYear) : existingEducation.fromYear,
+                toMonth: toMonth !== undefined ? (toMonth ? parseInt(toMonth) : null) : existingEducation.toMonth,
+                toYear: toYear !== undefined ? (toYear ? parseInt(toYear) : null) : existingEducation.toYear,
+                isCurrent: isCurrent !== undefined ? (isCurrent === true || isCurrent === 'true') : existingEducation.isCurrent
+            }
+        });
+
+        res.json(updatedEducation);
+    } catch (error) {
+        console.error('Error updating education:', error);
+        res.status(500).json({
+            message: "Error updating education",
+            error: error.message
+        });
+    }
+};
+
+const deleteEducation = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const educationId = parseInt(req.params.id);
+
+        if (isNaN(educationId)) {
+            return res.status(400).json({
+                message: "Invalid education ID"
+            });
+        }
+
+        // Verify ownership
+        const profile = await prisma.profile.findUnique({
+            where: { userId }
+        });
+
+        if (!profile) {
+            return res.status(404).json({
+                message: "Profile not found"
+            });
+        }
+
+        const education = await prisma.education.findFirst({
+            where: {
+                id: educationId,
+                profileId: profile.id
+            }
+        });
+
+        if (!education) {
+            return res.status(404).json({
+                message: "Education not found"
+            });
+        }
+
+        await prisma.education.delete({
+            where: { id: educationId }
+        });
+
+        res.json({
+            message: "Education deleted successfully"
+        });
+    } catch (error) {
+        console.error('Error deleting education:', error);
+        res.status(500).json({
+            message: "Error deleting education",
+            error: error.message
+        });
+    }
+};
+
 module.exports = {
     testMe,
     getProfile,
@@ -450,5 +907,11 @@ module.exports = {
     deleteUser,
     getUserById,
     searchUsers,
-    getSuggestions
+    getSuggestions,
+    createExperience,
+    updateExperience,
+    deleteExperience,
+    createEducation,
+    updateEducation,
+    deleteEducation
 }

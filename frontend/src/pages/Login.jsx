@@ -21,9 +21,6 @@ const Login = () => {
         // Get the user role from the auth context
         const userRole = result.user?.role;
         
-        // Show success message
-        alert('Login successful!');
-        
         // Redirect based on role
         if (userRole === 'RECRUITER') {
           navigate('/recruiter/dashboard');
@@ -31,7 +28,13 @@ const Login = () => {
           navigate('/candidate/dashboard');
         }
       } else {
-        setError(result.error);
+        // Handle validation errors or other errors
+        if (result.errors && Array.isArray(result.errors)) {
+          const errorMessages = result.errors.map(err => `${err.field}: ${err.message}`).join(', ');
+          setError(errorMessages);
+        } else {
+          setError(result.error || 'Login failed. Please check your credentials.');
+        }
       }
     } catch (err) {
       setError('An unexpected error occurred. Please try again.');
@@ -46,8 +49,16 @@ const Login = () => {
         <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
         
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
+          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded mb-4">
+            <div className="flex items-start">
+              <svg className="w-5 h-5 text-red-600 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <div className="flex-1">
+                <p className="font-medium">Login Failed</p>
+                <p className="text-sm mt-1">{error}</p>
+              </div>
+            </div>
           </div>
         )}
 
@@ -60,7 +71,10 @@ const Login = () => {
               type="email"
               id="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (error) setError('');
+              }}
               className="input-field"
               required
               disabled={isLoading}
@@ -75,7 +89,10 @@ const Login = () => {
               type="password"
               id="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (error) setError('');
+              }}
               className="input-field"
               required
               disabled={isLoading}

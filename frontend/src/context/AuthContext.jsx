@@ -9,7 +9,6 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Configure axios defaults
   axios.defaults.withCredentials = true;
   axios.defaults.baseURL = 'http://localhost:3000';
 
@@ -45,10 +44,12 @@ export const AuthProvider = ({ children }) => {
         user: response.data.user
       };
     } catch (error) {
-      console.error('Login error:', error.response?.data?.message || error.message);
+      console.error('Login error:', error.response?.data || error.message);
+      const errorData = error.response?.data || {};
       return {
         success: false,
-        error: error.response?.data?.message || 'Login failed'
+        error: errorData.error || errorData.message || 'Login failed',
+        errors: errorData.errors || null
       };
     }
   };
@@ -64,10 +65,12 @@ export const AuthProvider = ({ children }) => {
         user: response.data.user
       };
     } catch (error) {
-      console.error('Registration error:', error.response?.data?.message || error.message);
+      console.error('Registration error:', error.response?.data || error.message);
+      const errorData = error.response?.data || {};
       return {
         success: false,
-        error: error.response?.data?.message || 'Registration failed'
+        error: errorData.error || errorData.message || 'Registration failed',
+        errors: errorData.errors || null
       };
     }
   };

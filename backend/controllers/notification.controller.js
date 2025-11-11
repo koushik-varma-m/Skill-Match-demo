@@ -47,7 +47,7 @@ const markAsRead = async (req, res) => {
 
     const notification = await prisma.notification.update({
       where: {
-        id: parseInt(id),
+        id: Number.parseInt(id, 10),
         userId: userId
       },
       data: {
@@ -85,16 +85,55 @@ const markAllNotificationsAsRead = async (req, res) => {
 // Delete a notification
 const deleteNotification = async (req, res) => {
   try {
-    const { notificationId } = req.params;
-    await prisma.notification.delete({
+    const { id } = req.params;
+    const userId = req.user?.id;
+
+    // Validate id parameter
+    if (!id || id === 'undefined' || id === 'null') {
+      return res.status(400).json({ message: 'Notification ID is required' });
+    }
+
+    // Parse and validate the ID
+    const notificationId = Number.parseInt(id, 10);
+    if (Number.isNaN(notificationId) || notificationId <= 0) {
+      return res.status(400).json({ message: 'Invalid notification ID format' });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
+    // Verify the notification belongs to the user before deleting
+    const notification = await prisma.notification.findFirst({
       where: {
-        id: parseInt(notificationId),
+        id: notificationId,
+        userId: userId,
       },
     });
+
+    if (!notification) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+
+    // Delete the notification
+    await prisma.notification.delete({
+      where: {
+        id: notificationId,
+      },
+    });
+
     res.json({ message: 'Notification deleted successfully' });
   } catch (error) {
     console.error('Error deleting notification:', error);
-    res.status(500).json({ message: 'Error deleting notification' });
+    
+    if (error.code === 'P2025') {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
+    
+    res.status(500).json({ 
+      message: 'Error deleting notification', 
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined 
+    });
   }
 };
 

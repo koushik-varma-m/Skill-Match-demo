@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { formatDistanceToNow } from 'date-fns';
@@ -18,6 +19,7 @@ const JobList = ({ onEditJob, onDeleteJob, onPostNewJob }) => {
   const [quickSearch, setQuickSearch] = useState('');
   const [selectedJob, setSelectedJob] = useState(null);
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   const fetchJobs = async () => {
     try {
@@ -257,13 +259,28 @@ const JobList = ({ onEditJob, onDeleteJob, onPostNewJob }) => {
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredJobs.map((job) => (
-            <div key={job.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+            <div 
+              key={job.id} 
+              className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow cursor-pointer"
+              onClick={() => navigate(`/jobs/${job.id}`)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  navigate(`/jobs/${job.id}`);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+            >
               <div className="flex justify-between items-start mb-2">
-                <h2 className="text-xl font-semibold">{job.title}</h2>
+                <h2 className="text-xl font-semibold hover:text-teal-600 transition-colors">{job.title}</h2>
                 {user?.role === 'RECRUITER' && job.recruiterId === user.id && (
                   <div className="flex gap-2">
                     <button
-                      onClick={() => handleEditClick(job)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleEditClick(job);
+                      }}
                       className="text-teal-600 hover:text-teal-800"
                       title="Edit Job"
                     >
@@ -272,7 +289,10 @@ const JobList = ({ onEditJob, onDeleteJob, onPostNewJob }) => {
                       </svg>
                     </button>
                     <button
-                      onClick={() => handleDeleteClick(job.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteClick(job.id);
+                      }}
                       className="text-red-600 hover:text-red-800"
                       title="Delete Job"
                     >
@@ -288,16 +308,18 @@ const JobList = ({ onEditJob, onDeleteJob, onPostNewJob }) => {
                 <p className="text-gray-500">{job.location}</p>
                 <p className="text-gray-500">{job.type}</p>
               </div>
-              <div className="mb-4">
-                <h3 className="font-semibold mb-2">Required Skills:</h3>
-                <div className="flex flex-wrap gap-2">
-                  {job.skills?.map((skill, index) => (
-                    <span key={index} className="px-3 py-1 bg-teal-100 text-teal-800 rounded-full text-sm">
-                      {skill}
-                    </span>
-                  ))}
+              {job.skills && job.skills.length > 0 && (
+                <div className="mb-4">
+                  <h3 className="font-semibold mb-2">Skills:</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {job.skills.map((skill, index) => (
+                      <span key={index} className="px-3 py-1 bg-teal-100 text-teal-800 rounded-full text-sm">
+                        {skill}
+                      </span>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="flex justify-between items-center mt-4">
                 <span className="text-gray-500 text-sm">
                   Posted {formatDistanceToNow(new Date(job.createdAt), { addSuffix: true })}
@@ -306,16 +328,22 @@ const JobList = ({ onEditJob, onDeleteJob, onPostNewJob }) => {
                   (() => {
                     console.log('Job:', job.title, 'Application Status:', job.applicationStatus);
                     return job.applicationStatus ? (
-                      <span className={`px-4 py-2 rounded-lg text-sm font-medium ${
-                        job.applicationStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                        job.applicationStatus === 'ACCEPTED' ? 'bg-green-100 text-green-800' :
-                        'bg-red-100 text-red-800'
-                      }`}>
+                      <span 
+                        onClick={(e) => e.stopPropagation()}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium ${
+                          job.applicationStatus === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                          job.applicationStatus === 'ACCEPTED' ? 'bg-green-100 text-green-800' :
+                          'bg-red-100 text-red-800'
+                        }`}
+                      >
                         {job.applicationStatus}
                       </span>
                     ) : (
                       <button
-                        onClick={() => handleApply(job)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleApply(job);
+                        }}
                         className="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2"
                       >
                         Apply Now

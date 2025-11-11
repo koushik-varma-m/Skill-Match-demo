@@ -1,11 +1,19 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const RecruiterApplications = () => {
   const [applications, setApplications] = useState([]);
   const [error, setError] = useState('');
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleViewProfile = (userId) => {
+    if (userId) {
+      navigate(`/profile/${userId}`);
+    }
+  };
 
   useEffect(() => {
     fetchApplications();
@@ -89,16 +97,23 @@ const RecruiterApplications = () => {
 
               <div className="mb-4">
                 <h3 className="font-semibold mb-2">Applicant Details</h3>
-                <p className="text-gray-700">Name: {application.candidate.name}</p>
+                <p 
+                  className="text-gray-700 cursor-pointer hover:text-teal-600 transition-colors font-medium"
+                  onClick={() => handleViewProfile(application.candidate.id || application.candidateId)}
+                >
+                  Name: {application.candidate.name}
+                </p>
                 <p className="text-gray-700">Email: {application.candidate.email}</p>
                 <p className="text-gray-700">Expected Salary: ${application.expectedSalary}</p>
                 <p className="text-gray-700">Notice Period: {application.noticePeriod} days</p>
               </div>
 
-              <div className="mb-4">
-                <h3 className="font-semibold mb-2">Cover Letter</h3>
-                <p className="text-gray-700 whitespace-pre-wrap">{application.coverLetter}</p>
-              </div>
+              {application.coverLetter && (
+                <div className="mb-4">
+                  <h3 className="font-semibold mb-2">Cover Letter</h3>
+                  <p className="text-gray-700 whitespace-pre-wrap">{application.coverLetter}</p>
+                </div>
+              )}
 
               <div className="mb-4">
                 <h3 className="font-semibold mb-2">Resume</h3>

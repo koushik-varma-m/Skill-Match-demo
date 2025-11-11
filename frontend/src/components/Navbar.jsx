@@ -1,34 +1,115 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import { formatDistanceToNow } from 'date-fns';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const notificationRef = useRef(null);
 
-  const fetchUnreadCount = async () => {
+  const fetchNotifications = async (skipUnreadUpdate = false) => {
     try {
+      setLoadingNotifications(true);
       const response = await axios.get('http://localhost:3000/api/notifications', {
         withCredentials: true,
       });
-      const unread = response.data.filter(n => !n.read).length;
-      setUnreadCount(unread);
+      const allNotifications = response.data;
+      // Only update unread count if we're not skipping it (e.g., after marking all as read)
+      if (!skipUnreadUpdate) {
+        const unread = allNotifications.filter(n => !n.read).length;
+        setUnreadCount(unread);
+      }
+      // Store first 3 notifications for dropdown
+      setNotifications(allNotifications.slice(0, 3));
     } catch (error) {
-      console.error('Error fetching unread notifications:', error);
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  const deleteNotification = async (notificationId, e) => {
+    e.stopPropagation();
+    
+    // Validate notificationId
+    if (!notificationId) {
+      console.error('Invalid notification ID:', notificationId);
+      return;
+    }
+
+    try {
+      await axios.delete(`http://localhost:3000/api/notifications/${notificationId}`, {
+        withCredentials: true,
+      });
+      
+      // Remove from local state
+      const updatedNotifications = notifications.filter(n => n.id !== notificationId);
+      setNotifications(updatedNotifications);
+      // Recalculate unread count from remaining notifications
+      const unread = updatedNotifications.filter(n => !n.read).length;
+      setUnreadCount(unread);
+      // Refresh all notifications to get updated list and sync unread count
+      fetchNotifications();
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      console.error('Notification ID:', notificationId);
+      console.error('Error response:', error.response?.data);
     }
   };
 
   useEffect(() => {
     if (user) {
-      fetchUnreadCount();
+      fetchNotifications();
       // Poll for new notifications every minute
-      const interval = setInterval(fetchUnreadCount, 60000);
+      const interval = setInterval(fetchNotifications, 60000);
       return () => clearInterval(interval);
     }
   }, [user]);
+
+  const markAllAsRead = async () => {
+    try {
+      // Immediately clear the badge (optimistic update) - badge disappears instantly
+      setUnreadCount(0);
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+      
+      // Mark all notifications as read on backend
+      await axios.put('http://localhost:3000/api/notifications/read-all', {}, {
+        withCredentials: true,
+      });
+    } catch (error) {
+      console.error('Error marking notifications as read:', error);
+    }
+  };
+
+  // Close dropdown when clicking outside and mark as read when opened
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+
+    if (showNotifications) {
+      document.addEventListener('mousedown', handleClickOutside);
+      // Immediately clear badge when dropdown opens (optimistic update)
+      setUnreadCount(0);
+      // Mark all notifications as read and then fetch updated list
+      markAllAsRead().then(() => {
+        // After marking as read, fetch notifications but don't update unread count
+        // since we just marked them all as read
+        fetchNotifications(true);
+      });
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }
+  }, [showNotifications]);
 
   const handleLogout = async () => {
     try {
@@ -92,7 +173,7 @@ const Navbar = () => {
                     Applications
                   </Link>
                 )}
-                <div className="relative">
+                <div className="relative" ref={notificationRef}>
                   <button
                     onClick={() => setShowNotifications(!showNotifications)}
                     className="text-gray-700 hover:text-gray-900 p-2 rounded-full relative transition-colors duration-200"
@@ -117,17 +198,65 @@ const Navbar = () => {
                     )}
                   </button>
                   {showNotifications && (
-                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-sm py-2 z-50 border border-gray-200">
-                      <div className="px-4 py-2 border-b border-gray-200">
+                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg py-2 z-50 border border-gray-200">
+                      <div className="px-4 py-2 border-b border-gray-200 flex justify-between items-center">
                         <h3 className="text-lg font-semibold text-gray-700">Notifications</h3>
+                        <button
+                          onClick={() => setShowNotifications(false)}
+                          className="text-gray-400 hover:text-gray-600"
+                        >
+                          <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
                       </div>
                       <div className="max-h-96 overflow-y-auto">
-                        {/* Notifications will be loaded here */}
+                        {loadingNotifications ? (
+                          <div className="flex justify-center items-center py-4">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-teal-600"></div>
+                          </div>
+                        ) : notifications.length === 0 ? (
+                          <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                            No notifications yet
+                          </div>
+                        ) : (
+                          <div className="divide-y divide-gray-100">
+                            {notifications.map((notification) => (
+                              <div
+                                key={notification.id}
+                                className={`px-4 py-3 hover:bg-gray-50 transition-colors ${
+                                  !notification.read ? 'bg-teal-50' : ''
+                                }`}
+                              >
+                                <div className="flex justify-between items-start">
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm text-gray-800 break-words">
+                                      {notification.message}
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                                    </p>
+                                  </div>
+                                  <button
+                                    onClick={(e) => deleteNotification(notification.id, e)}
+                                    className="ml-2 text-gray-400 hover:text-red-600 transition-colors flex-shrink-0"
+                                    title="Delete notification"
+                                  >
+                                    <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="px-4 py-2 border-t border-gray-200">
                         <Link
                           to="/notifications"
-                          className="text-gray-700 hover:text-gray-900 text-sm font-medium transition-colors duration-200"
+                          onClick={() => setShowNotifications(false)}
+                          className="text-teal-600 hover:text-teal-800 text-sm font-medium transition-colors duration-200 text-center block"
                         >
                           View all notifications
                         </Link>

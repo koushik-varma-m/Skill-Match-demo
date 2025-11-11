@@ -55,10 +55,14 @@ const Jobs = () => {
   const handleCreateJob = async (e) => {
     e.preventDefault();
     try {
-      // Convert skills string to array and trim whitespace
+      // Convert skills string to array and trim whitespace (handle empty string)
+      const skillsArray = newJob.skills && newJob.skills.trim() 
+        ? newJob.skills.split(',').map(skill => skill.trim()).filter(skill => skill !== '')
+        : [];
+      
       const jobData = {
         ...newJob,
-        skills: newJob.skills.split(',').map(skill => skill.trim()).filter(skill => skill !== '')
+        skills: skillsArray
       };
 
       // Ensure all string fields are not null
@@ -279,14 +283,13 @@ const Jobs = () => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Skills *
+                  Skills
                 </label>
                 <input
                   type="text"
                   value={newJob.skills}
                   onChange={(e) => setNewJob({ ...newJob, skills: e.target.value })}
                   className="w-full px-4 py-2 border rounded-md focus:ring-teal-500 focus:border-teal-500"
-                  required
                   placeholder="Enter skills separated by commas (e.g., React, Node.js, Python)"
                 />
               </div>

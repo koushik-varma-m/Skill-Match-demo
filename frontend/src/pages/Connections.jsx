@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 const Connections = () => {
   const [connections, setConnections] = useState([]);
@@ -14,13 +15,29 @@ const Connections = () => {
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(true);
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleViewProfile = (userId) => {
+    if (userId) {
+      navigate(`/profile/${userId}`);
+    }
+  };
 
   useEffect(() => {
-    fetchConnections();
-    fetchSentRequests();
-    fetchReceivedRequests();
-    fetchSuggestions();
+    const loadData = async () => {
+      await fetchConnections();
+      const requests = await fetchSentRequests();
+      await fetchReceivedRequests();
+      // Get user IDs from sent requests to exclude from suggestions
+      const excludeUserIds = requests
+        .map(req => req.receiverId || (req.receiver && req.receiver.id))
+        .filter(id => id !== undefined);
+      // Fetch suggestions after sent requests so we can filter them
+      await fetchSuggestions(excludeUserIds);
+    };
+    loadData();
   }, []);
+
 
   const fetchConnections = async () => {
     try {
@@ -39,13 +56,25 @@ const Connections = () => {
 
   const fetchSentRequests = async () => {
     try {
+      console.log('=== Fetching Sent Requests ===');
       const response = await axios.get('http://localhost:3000/api/connection/requests/sent', {
         withCredentials: true
       });
-      setSentRequests(response.data?.connection || []);
+      console.log('Sent requests response:', response.data);
+      console.log('Response status:', response.status);
+      const requests = response.data?.connection || response.data || [];
+      console.log('Parsed sent requests:', requests);
+      console.log('Number of sent requests:', requests.length);
+      if (requests.length > 0) {
+        console.log('First sent request:', requests[0]);
+      }
+      setSentRequests(requests);
+      return requests;
     } catch (err) {
       console.error('Error fetching sent requests:', err);
+      console.error('Error response:', err.response?.data);
       setSentRequests([]);
+      return [];
     }
   };
 
@@ -66,9 +95,9 @@ const Connections = () => {
     }
   };
 
-  const fetchSuggestions = async () => {
+  const fetchSuggestions = async (excludeUserIds = []) => {
     try {
-      console.log('Fetching suggestions...');
+      console.log('Fetching suggestions...', excludeUserIds.length > 0 ? `(excluding ${excludeUserIds.length} users)` : '');
       const response = await axios.get('http://localhost:3000/api/user/suggestions', {
         withCredentials: true,
         headers: {
@@ -76,7 +105,18 @@ const Connections = () => {
         }
       });
       console.log('Suggestions response:', response.data);
-      setSuggestions(response.data);
+      let suggestions = response.data || [];
+      
+      // Filter out users who are already in sent requests (fallback check)
+      if (excludeUserIds.length > 0) {
+        const excludeSet = new Set(excludeUserIds);
+        console.log('Filtering suggestions - excluding user IDs:', Array.from(excludeSet));
+        const beforeCount = suggestions.length;
+        suggestions = suggestions.filter(suggestion => !excludeSet.has(suggestion.id));
+        console.log(`Suggestions filtered: ${beforeCount} -> ${suggestions.length}`);
+      }
+      
+      setSuggestions(suggestions);
     } catch (err) {
       console.error('Error fetching suggestions:', {
         message: err.message,
@@ -109,10 +149,38 @@ const Connections = () => {
 
   const handleSendRequest = async (userId) => {
     try {
-      await axios.post(`http://localhost:3000/api/connection/request/${userId}`, {}, {
+      console.log('Sending connection request to user:', userId);
+      const response = await axios.post(`http://localhost:3000/api/connection/request/${userId}`, {}, {
         withCredentials: true
       });
+      console.log('Connection request sent successfully:', response.data);
       setError('');
+      
+      const connectionData = response.data;
+      console.log('Full connection data:', JSON.stringify(connectionData, null, 2));
+      
+      // Get receiver ID - Prisma includes receiverId in the response
+      const receiverId = connectionData.receiverId || (connectionData.receiver && connectionData.receiver.id);
+      
+      if (!receiverId) {
+        console.error('No receiver ID in response:', connectionData);
+        // Fallback: fetch sent requests after a delay
+        setTimeout(async () => {
+          await fetchSentRequests();
+        }, 500);
+        return;
+      }
+      
+      // Get receiver info from response
+      const receiverInfo = connectionData.receiver;
+      
+      // Remove user from suggestions immediately (do this regardless of receiver info)
+      setSuggestions(prev => {
+        const filtered = prev.filter(user => user.id !== userId);
+        console.log('Removed user from suggestions. Remaining:', filtered.length);
+        return filtered;
+      });
+      
       // Update the search results to reflect the sent request
       setSearchResults(prev => 
         prev.map(user => 
@@ -121,7 +189,53 @@ const Connections = () => {
             : user
         )
       );
-      fetchSentRequests();
+      
+      if (receiverInfo) {
+        // Create sent request object from response
+        const newSentRequest = {
+          id: connectionData.id,
+          receiverId: receiverId,
+          Name: receiverInfo.firstname || 'Unknown User',
+          status: connectionData.status || 'PENDING',
+          receiver: receiverInfo
+        };
+        
+        console.log('Adding sent request to state:', newSentRequest);
+        
+        // Update sent requests state immediately
+        setSentRequests(prev => {
+          // Check if this request already exists
+          const exists = prev.some(req => req.id === newSentRequest.id || req.receiverId === receiverId);
+          if (exists) {
+            console.log('Request already exists in state, updating...');
+            return prev.map(req => 
+              req.id === newSentRequest.id || req.receiverId === receiverId 
+                ? newSentRequest 
+                : req
+            );
+          }
+          console.log('Adding new request to state');
+          return [...prev, newSentRequest];
+        });
+        
+        // Refresh sent requests from backend after a delay to ensure we have the latest data
+        setTimeout(async () => {
+          console.log('Refreshing sent requests from backend to sync...');
+          await fetchSentRequests();
+        }, 300);
+      } else {
+        console.warn('No receiver info in response, fetching from backend...');
+        // Fallback: fetch sent requests to get full data
+        setTimeout(async () => {
+          await fetchSentRequests();
+        }, 300);
+      }
+      
+      // Refresh suggestions after a delay to ensure backend has updated and excludes this user
+      setTimeout(() => {
+        console.log('Refreshing suggestions from backend...');
+        fetchSuggestions([receiverId]);
+      }, 800);
     } catch (err) {
       console.error('Error sending request:', err);
       setError(err.response?.data?.message || 'Failed to send connection request');
@@ -170,7 +284,8 @@ const Connections = () => {
       await Promise.all([
         fetchConnections(),
         fetchReceivedRequests(),
-        fetchSentRequests()
+        fetchSentRequests(),
+        fetchSuggestions() // Refresh suggestions since user is now connected
       ]);
 
       // Clear any existing error
@@ -193,9 +308,14 @@ const Connections = () => {
       await axios.put(`http://localhost:3000/api/connection/remove/${requestId}`, {}, {
         withCredentials: true
       });
-      fetchConnections();
-      fetchSentRequests();
-      fetchReceivedRequests();
+      // Refresh all connection-related data
+      await Promise.all([
+        fetchConnections(),
+        fetchSentRequests(),
+        fetchReceivedRequests(),
+        fetchSuggestions() // Refresh suggestions so the user can appear again
+      ]);
+      setError('');
     } catch (err) {
       console.error('Error removing connection:', err);
       setError('Failed to remove connection');
@@ -243,7 +363,10 @@ const Connections = () => {
             {searchResults.map((result) => (
               <div key={`search-${result.id}`} className="card">
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden">
+                  <div 
+                    className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => handleViewProfile(result.id)}
+                  >
                     {result.profile?.profilePicture ? (
                       <img
                         src={`http://localhost:3000${result.profile.profilePicture}`}
@@ -257,13 +380,21 @@ const Connections = () => {
                     )}
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold">{result.firstname} {result.lastname}</h3>
+                    <h3 
+                      className="font-semibold cursor-pointer hover:text-teal-600 transition-colors"
+                      onClick={() => handleViewProfile(result.id)}
+                    >
+                      {result.firstname} {result.lastname}
+                    </h3>
                     <p className="text-sm text-gray-600">{result.email}</p>
                     <p className="text-sm text-gray-500 capitalize">{result.role.toLowerCase()}</p>
                   </div>
                   {result.id !== user?.id && (
                     <button
-                      onClick={() => handleSendRequest(result.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSendRequest(result.id);
+                      }}
                       disabled={result.connectionStatus === 'PENDING' || result.connectionStatus === 'CONNECTED'}
                       className={`bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-md font-medium transition-colors duration-200 ${
                         result.connectionStatus === 'PENDING' ? 'bg-gray-400' :
@@ -298,7 +429,10 @@ const Connections = () => {
             {suggestions.map((suggestion) => (
               <div key={`suggestion-${suggestion.id}`} className="card">
                 <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden">
+                  <div 
+                    className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                    onClick={() => handleViewProfile(suggestion.id)}
+                  >
                     {suggestion.profile?.profilePicture ? (
                       <img
                         src={`http://localhost:3000${suggestion.profile.profilePicture}`}
@@ -312,7 +446,12 @@ const Connections = () => {
                     )}
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold">{suggestion.firstname} {suggestion.lastname}</h3>
+                    <h3 
+                      className="font-semibold cursor-pointer hover:text-teal-600 transition-colors"
+                      onClick={() => handleViewProfile(suggestion.id)}
+                    >
+                      {suggestion.firstname} {suggestion.lastname}
+                    </h3>
                     <p className="text-sm text-gray-600">{suggestion.email}</p>
                     <p className="text-sm text-gray-500 capitalize">{suggestion.role.toLowerCase()}</p>
                     {suggestion.matchingSkills && suggestion.matchingSkills.length > 0 && (
@@ -330,16 +469,20 @@ const Connections = () => {
                   </div>
                   {suggestion.id !== user?.id && (
                     <button
-                      onClick={() => handleSendRequest(suggestion.id)}
-                      disabled={suggestion.connectionStatus === 'PENDING' || suggestion.connectionStatus === 'CONNECTED'}
-                      className={`bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-md font-medium transition-colors duration-200 ${
-                        suggestion.connectionStatus === 'PENDING' ? 'bg-gray-400' :
-                        suggestion.connectionStatus === 'CONNECTED' ? 'bg-green-600' : ''
-                      }`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSendRequest(suggestion.id);
+                      }}
+                      className="bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-md font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={sentRequests.some(req => 
+                        (req.receiverId === suggestion.id) || 
+                        (req.receiver && req.receiver.id === suggestion.id)
+                      )}
                     >
-                      {suggestion.connectionStatus === 'PENDING' ? 'Request Sent' :
-                       suggestion.connectionStatus === 'CONNECTED' ? 'Connected' :
-                       'Connect'}
+                      {sentRequests.some(req => 
+                        (req.receiverId === suggestion.id) || 
+                        (req.receiver && req.receiver.id === suggestion.id)
+                      ) ? 'Request Sent' : 'Connect'}
                     </button>
                   )}
                 </div>
@@ -354,34 +497,77 @@ const Connections = () => {
       </div>
 
       {/* Sent Connection Requests */}
-      {sentRequests?.length > 0 && (
-        <div key="sent-requests-section" className="mb-8">
-          <h2 className="text-xl font-bold mb-4">Sent Requests</h2>
-          <div className="space-y-4">
+      <div key="sent-requests-section" className="mb-8">
+        <h2 className="text-xl font-bold mb-4">Sent Requests</h2>
+        {sentRequests && Array.isArray(sentRequests) && sentRequests.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2">
             {sentRequests
-              .filter(request => request && request.id) // Filter out invalid requests
-              .map((request, index) => (
-                <div 
-                  key={`sent-${request.id || `temp-${index}`}`} 
-                  className="card flex justify-between items-center"
-                >
-                  <div>
-                    <h3 className="font-semibold">{request.Name || 'Unknown User'}</h3>
-                    <p className="text-gray-600">Request {request.status?.toLowerCase() || 'pending'}</p>
-                  </div>
-                  {request.status === 'PENDING' && (
+              .filter(request => request && request.id)
+              .map((request, index) => {
+                const receiver = request.receiver || null;
+                const displayName = receiver 
+                  ? (receiver.firstname && receiver.lastname ? `${receiver.firstname} ${receiver.lastname}` : receiver.firstname || request.Name || 'Unknown User')
+                  : (request.Name || 'Unknown User');
+                
+                return (
+                  <div 
+                    key={`sent-${request.id || `temp-${index}`}`} 
+                    className="card flex items-center justify-between"
+                  >
+                    <div className="flex items-center space-x-4 flex-1">
+                      <div 
+                        className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => handleViewProfile(receiver?.id || request.receiverId)}
+                      >
+                        {receiver?.profile?.profilePicture ? (
+                          <img
+                            src={`http://localhost:3000${receiver.profile.profilePicture}`}
+                            alt={receiver.firstname || 'User'}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-gray-400">
+                            {(receiver?.firstname?.[0] || request.Name?.[0] || displayName?.[0] || 'U').toUpperCase()}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 
+                          className="font-semibold truncate cursor-pointer hover:text-teal-600 transition-colors"
+                          onClick={() => handleViewProfile(receiver?.id || request.receiverId)}
+                        >
+                          {displayName}
+                        </h3>
+                        {receiver?.email && (
+                          <p className="text-sm text-gray-600 truncate">{receiver.email}</p>
+                        )}
+                        {receiver?.role && (
+                          <p className="text-sm text-gray-500 capitalize">{receiver.role.toLowerCase()}</p>
+                        )}
+                      </div>
+                    </div>
                     <button
-                      onClick={() => handleRemoveConnection(request.id)}
-                      className="bg-teal-100 text-teal-800 hover:bg-teal-200 px-4 py-2 rounded-md font-medium transition-colors duration-200"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveConnection(request.id);
+                      }}
+                      className="bg-teal-100 text-teal-800 hover:bg-teal-200 px-4 py-2 rounded-md font-medium transition-colors duration-200 ml-4 flex-shrink-0"
                     >
                       Cancel Request
                     </button>
-                  )}
-                </div>
-              ))}
+                  </div>
+                );
+              })}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="text-center py-8 bg-white rounded-lg shadow">
+            <p className="text-gray-500">No sent requests</p>
+            {process.env.NODE_ENV === 'development' && (
+              <p className="text-xs text-gray-400 mt-2">Debug: sentRequests length = {sentRequests?.length || 0}</p>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Received Connection Requests */}
       {receivedRequests?.filter(request => request && request.status === 'PENDING').length > 0 && (
@@ -396,18 +582,29 @@ const Connections = () => {
                   className="card flex justify-between items-center"
                 >
                   <div>
-                    <h3 className="font-semibold">{request.Name || 'Unknown User'}</h3>
+                    <h3 
+                      className="font-semibold cursor-pointer hover:text-teal-600 transition-colors"
+                      onClick={() => handleViewProfile(request.senderId || request.sender?.id)}
+                    >
+                      {request.Name || 'Unknown User'}
+                    </h3>
                     <p className="text-gray-600">Wants to connect with you</p>
                   </div>
                   <div className="space-x-2">
                     <button
-                      onClick={() => handleAcceptRequest(request.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAcceptRequest(request.id);
+                      }}
                       className="bg-teal-600 text-white hover:bg-teal-700 px-4 py-2 rounded-md font-medium transition-colors duration-200"
                     >
                       Accept
                     </button>
                     <button
-                      onClick={() => handleRemoveConnection(request.id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveConnection(request.id);
+                      }}
                       className="bg-teal-100 text-teal-800 hover:bg-teal-200 px-4 py-2 rounded-md font-medium transition-colors duration-200"
                     >
                       Decline
@@ -439,7 +636,10 @@ const Connections = () => {
                     className="card"
                   >
                     <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden">
+                      <div 
+                        className="w-12 h-12 rounded-full bg-gray-200 overflow-hidden cursor-pointer hover:opacity-80 transition-opacity"
+                        onClick={() => handleViewProfile(connection.id)}
+                      >
                         {connection.profile?.profilePicture ? (
                           <img
                             src={`http://localhost:3000${connection.profile.profilePicture}`}
@@ -452,10 +652,16 @@ const Connections = () => {
                           </div>
                         )}
                       </div>
-                      <div>
-                        <h3 className="font-semibold">{connection.firstname || 'Unknown User'}</h3>
+                      <div className="flex-1">
+                        <h3 
+                          className="font-semibold cursor-pointer hover:text-teal-600 transition-colors"
+                          onClick={() => handleViewProfile(connection.id)}
+                        >
+                          {connection.firstname || 'Unknown User'} {connection.lastname || ''}
+                        </h3>
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             console.log('Removing connection:', connection); // Debug log
                             handleRemoveConnection(connection.connectionId || connection.id);
                           }}

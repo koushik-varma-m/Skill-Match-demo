@@ -113,12 +113,14 @@ const MyApplications = () => {
                   )}
                 </div>
 
-                <div className="mb-6">
-                  <h4 className="font-semibold text-gray-700 mb-2">Cover Letter</h4>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-gray-700 whitespace-pre-wrap">{application.coverLetter}</p>
+                {application.coverLetter && (
+                  <div className="mb-6">
+                    <h4 className="font-semibold text-gray-700 mb-2">Cover Letter</h4>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <p className="text-gray-700 whitespace-pre-wrap">{application.coverLetter}</p>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div className="flex justify-between items-center pt-4 border-t border-gray-200">
                   <a

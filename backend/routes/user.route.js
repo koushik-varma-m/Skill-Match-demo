@@ -42,7 +42,13 @@ const {
     deleteUser,
     getUserById,
     searchUsers,
-    getSuggestions
+    getSuggestions,
+    createExperience,
+    updateExperience,
+    deleteExperience,
+    createEducation,
+    updateEducation,
+    deleteEducation
 } = require('../controllers/user.controller');
 
 // Specific routes first
@@ -52,6 +58,16 @@ router.put('/profile', authMiddleware, upload.single('profilePicture'), updatePr
 router.delete('/profile', authMiddleware, deleteUser);
 router.get('/search', authMiddleware, searchUsers);
 router.get('/suggestions', authMiddleware, getSuggestions);
+
+// Experience routes
+router.post('/experience', authMiddleware, createExperience);
+router.put('/experience/:id', authMiddleware, updateExperience);
+router.delete('/experience/:id', authMiddleware, deleteExperience);
+
+// Education routes
+router.post('/education', authMiddleware, createEducation);
+router.put('/education/:id', authMiddleware, updateEducation);
+router.delete('/education/:id', authMiddleware, deleteEducation);
 
 // Generic routes last
 router.get('/:userId', authMiddleware, getUserById);

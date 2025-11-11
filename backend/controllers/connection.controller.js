@@ -7,11 +7,14 @@ const sendConnectionRequest = async(req,res) => {
         const receiverId = parseInt(req.params.userId);
         const senderId = req.user.id;
 
-        if (!receiverId) {
+        console.log('=== Sending Connection Request ===');
+        console.log('Sender ID:', senderId);
+        console.log('Receiver ID:', receiverId);
+
+        if (!receiverId || Number.isNaN(receiverId)) {
             return res.status(400).json({ message: 'Receiver ID is required' });
         }
-
-        // Check if connection already exists
+        
         const existingConnection = await prisma.connection.findFirst({
             where: {
                 OR: [
@@ -22,6 +25,7 @@ const sendConnectionRequest = async(req,res) => {
         });
 
         if (existingConnection) {
+            console.log('Connection already exists:', existingConnection);
             return res.status(400).json({ message: 'Connection already exists' });
         }
 
@@ -37,12 +41,35 @@ const sendConnectionRequest = async(req,res) => {
                 status: 'PENDING'
             },
             include: {
-                sender: true,
-                receiver: true
+                sender: {
+                    select: {
+                        id: true,
+                        firstname: true,
+                        lastname: true,
+                        email: true,
+                        role: true
+                    }
+                },
+                receiver: {
+                    select: {
+                        id: true,
+                        firstname: true,
+                        lastname: true,
+                        email: true,
+                        role: true,
+                        profile: {
+                            select: {
+                                profilePicture: true
+                            }
+                        }
+                    }
+                }
             }
         });
 
-        // Create notification for receiver
+        console.log('Connection created successfully:', connection.id, 'Status:', connection.status);
+        console.log('Connection receiver:', connection.receiver);
+
         await createNotification(
             receiverId,
             'CONNECTION_REQUEST',
@@ -52,7 +79,7 @@ const sendConnectionRequest = async(req,res) => {
         res.json(connection);
     }catch(error){
         console.error('Error sending connection request:', error);
-        res.status(500).json({ message: 'Error sending connection request' });
+        res.status(500).json({ message: 'Error sending connection request', error: error.message });
     }
 }
 
@@ -185,29 +212,63 @@ const removeConnection = async(req,res) => {
 const getConnectionSentRequests = async(req,res) => {
     try{
         const userId = req.user.id;
+        console.log('Fetching sent requests for user:', userId);
+        
         const requests = await prisma.connection.findMany({
-            where: {senderId: userId},
+            where: {
+                senderId: userId,
+                status: 'PENDING' // Only return pending requests
+            },
             select:{
-                receiverId:true,
-                status:true
+                id: true,
+                receiverId: true,
+                status: true
             }
         });
+        
+        console.log('Found sent requests:', requests.length, requests);
+        
         const requestsProfile = await Promise.all(requests.map(async(request) => {
-            return ({
-                Name: (await prisma.user.findUnique({
-                    where: {id: request.receiverId},
-                    select:{
-                        firstname: true
+            const receiver = await prisma.user.findUnique({
+                where: {id: request.receiverId},
+                select:{
+                    id: true,
+                    firstname: true,
+                    lastname: true,
+                    email: true,
+                    role: true,
+                    profile: {
+                        select: {
+                            profilePicture: true
+                        }
                     }
-                })).firstname,
-                status:request.status
+                }
             });
-        }))
+            
+            if (!receiver) {
+                console.warn('Receiver not found for request:', request.id, 'receiverId:', request.receiverId);
+            }
+            
+            return {
+                id: request.id,
+                receiverId: request.receiverId,
+                Name: receiver?.firstname || 'Unknown User',
+                status: request.status,
+                receiver: receiver || null
+            };
+        }));
 
-        res.json({messasge: "Requests Sent", connection: requestsProfile});
+        console.log('Returning sent requests:', requestsProfile.length);
+        console.log('Sent requests data:', JSON.stringify(requestsProfile, null, 2));
+        
+        // Always return an array, even if empty
+        res.json({
+            message: "Requests Sent", 
+            connection: requestsProfile || []
+        });
     }catch(error){
-        console.log(error);
-        res.json({message: "Server Error"});
+        console.error('Error in getConnectionSentRequests:', error);
+        res.status(500).json({message: "Server Error", error: error.message});
     }
 }
 
@@ -249,6 +310,7 @@ const getConnectionReceivedRequests = async(req,res) => {
 
             return {
                 id: request.id,
+                senderId: request.senderId,
                 Name: sender?.firstname || 'Unknown User',
                 status: request.status,
                 sender: sender
