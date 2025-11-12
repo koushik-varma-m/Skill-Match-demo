@@ -159,12 +159,20 @@ const Navbar = () => {
                   Connections
                 </Link>
                 {user.role === 'CANDIDATE' ? (
-                  <Link
-                    to="/my-applications"
-                    className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
-                  >
-                    My Applications
-                  </Link>
+                  <>
+                    <Link
+                      to="/resume-match"
+                      className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                    >
+                      Resume Match
+                    </Link>
+                    <Link
+                      to="/my-applications"
+                      className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                    >
+                      My Applications
+                    </Link>
+                  </>
                 ) : user.role === 'RECRUITER' && (
                   <Link
                     to="/recruiter-applications"

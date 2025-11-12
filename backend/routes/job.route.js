@@ -37,7 +37,7 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 5 * 1024 * 1024 
+        fileSize: 5 * 1024 * 1024
     },
     fileFilter: function (req, file, cb) {
         if (!file.originalname.match(/\.(pdf|doc|docx)$/)) {
@@ -47,24 +47,21 @@ const upload = multer({
     }
 });
 
+router.get('/', authMiddleware, getJobs);
+router.get('/all', getAllJobPosts);
 
-router.get('/', authMiddleware, getJobs); 
-router.get('/all', getAllJobPosts); 
+router.get('/applications', authMiddleware, getMyApplications);
+router.get('/matching', authMiddleware, findMatchingJobs);
 
-router.get('/applications', authMiddleware, getMyApplications); 
-router.get('/matching', authMiddleware, findMatchingJobs); 
+router.post('/', authMiddleware, createJob);
+router.get('/recruiter/jobs', authMiddleware, getJobsByRecruiter);
+router.get('/recruiter/applications', authMiddleware, getRecruiterApplications);
+router.put('/applications/:applicationId/status', authMiddleware, updateApplicationStatus);
 
-
-router.post('/', authMiddleware, createJob); 
-router.get('/recruiter/jobs', authMiddleware, getJobsByRecruiter); 
-router.get('/recruiter/applications', authMiddleware, getRecruiterApplications); 
-router.put('/applications/:applicationId/status', authMiddleware, updateApplicationStatus); 
-
-
-router.get('/:jobId', authMiddleware, getJobById); 
-router.put('/:jobId', authMiddleware, updateJob); 
-router.delete('/:jobId', authMiddleware, deleteJob); 
-router.post('/:jobId/apply', authMiddleware, upload.single('resume'), applyForJob); 
-router.get('/:jobId/match', authMiddleware, getJobWithMatchScore); 
+router.get('/:jobId', authMiddleware, getJobById);
+router.put('/:jobId', authMiddleware, updateJob);
+router.delete('/:jobId', authMiddleware, deleteJob);
+router.post('/:jobId/apply', authMiddleware, upload.single('resume'), applyForJob);
+router.get('/:jobId/match', authMiddleware, getJobWithMatchScore);
 
 module.exports = router;

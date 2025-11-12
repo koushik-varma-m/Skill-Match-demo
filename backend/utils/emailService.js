@@ -1,6 +1,5 @@
 const nodemailer = require('nodemailer');
 
-// Create a transporter using Gmail
 const transporter = nodemailer.createTransport({
   service: 'gmail',
   auth: {
@@ -9,7 +8,6 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-// Email templates
 const emailTemplates = {
   applicationAccepted: (jobTitle, companyName) => ({
     subject: `Application Update: ${jobTitle} at ${companyName}`,
@@ -46,11 +44,9 @@ const emailTemplates = {
   })
 };
 
-// Function to send email
 const sendEmail = async (to, template, data) => {
   try {
     const { subject, html } = template(data.jobTitle, data.companyName);
-    
     const mailOptions = {
       from: `"SkillMatch Platform" <${process.env.EMAIL_USER}>`,
       to,
@@ -70,4 +66,4 @@ const sendEmail = async (to, template, data) => {
 module.exports = {
   sendEmail,
   emailTemplates
-}; 
+};

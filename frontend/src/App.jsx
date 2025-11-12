@@ -13,6 +13,7 @@ import RecruiterDashboard from './pages/RecruiterDashboard';
 import MyApplications from './components/MyApplications';
 import RecruiterApplications from './components/RecruiterApplications';
 import JobDetails from './pages/JobDetails';
+import ResumeMatch from './pages/ResumeMatch';
 import { AuthProvider } from './context/AuthContext';
 import PrivateRoute from './components/PrivateRoute';
 import Notifications from './components/Notifications';
@@ -123,6 +124,14 @@ function App() {
                 element={
                   <PrivateRoute>
                     <Notifications />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/resume-match"
+                element={
+                  <PrivateRoute>
+                    <ResumeMatch />
                   </PrivateRoute>
                 }
               />

@@ -5,14 +5,12 @@ async function getDashboardStats(req, res) {
   try {
     const recruiterId = req.user.id;
 
-    // Get active job postings count
     const activeJobs = await prisma.job.count({
       where: {
         recruiterId
       }
     });
 
-    // Get new applications count (applications received today)
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const newApplications = await prisma.jobApplication.count({
@@ -26,7 +24,6 @@ async function getDashboardStats(req, res) {
       }
     });
 
-    // Get total candidates count
     const totalCandidates = await prisma.user.count({
       where: {
         role: 'CANDIDATE'
@@ -46,4 +43,4 @@ async function getDashboardStats(req, res) {
 
 module.exports = {
   getDashboardStats
-}; 
+};

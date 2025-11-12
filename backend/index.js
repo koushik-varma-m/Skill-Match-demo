@@ -39,6 +39,7 @@ const jobsRouter = require('./routes/job.route');
 const postRouter = require('./routes/post.route');
 const recruiterRouter = require('./routes/recruiter.route');
 const notificationRoutes = require('./routes/notification.route');
+const resumeMatchRouter = require('./routes/resumeMatch.route');
 
 app.use('/api/auth', authRouter);
 app.use('/api/user', userRouter);
@@ -47,6 +48,7 @@ app.use('/api/job', jobsRouter);
 app.use('/api/post', postRouter);
 app.use('/api/recruiter', recruiterRouter);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/resume-match', resumeMatchRouter);
 
 // Create upload directories if they don't exist
 const uploadDirs = ['uploads', 'uploads/profile', 'uploads/posts', 'uploads/resumes'];

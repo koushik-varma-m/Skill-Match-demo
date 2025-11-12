@@ -6,7 +6,6 @@ const { createNotification } = require('./notification.controller');
 
 const getAllPosts = async(req, res) => {
     try{
-        // First get all connections for the current user
         const connections = await prisma.connection.findMany({
             where: {
                 OR: [
@@ -21,15 +20,11 @@ const getAllPosts = async(req, res) => {
             }
         });
 
-        // Extract connected user IDs
-        const connectedUserIds = connections.map(conn => 
+        const connectedUserIds = connections.map(conn =>
             conn.senderId === req.user.id ? conn.receiverId : conn.senderId
         );
-        
-        // Add current user's ID to see their own posts
         connectedUserIds.push(req.user.id);
 
-        // Get posts from connected users
         const posts = await prisma.post.findMany({
             where: {
                 userId: {
@@ -184,7 +179,6 @@ const createPost = async(req, res) => {
             }
         });
 
-        // Get all connections of the user
         const connections = await prisma.connection.findMany({
             where: {
                 OR: [
@@ -194,7 +188,6 @@ const createPost = async(req, res) => {
             },
         });
 
-        // Create notifications for all connections
         const notificationPromises = connections.map(connection => {
             const connectionUserId = connection.senderId === req.user.id ? connection.receiverId : connection.senderId;
             return createNotification(
@@ -237,7 +230,6 @@ const updatePost = async(req, res) => {
         };
 
         if (req.files && req.files.image) {
-            // Delete old image if exists
             if (userPosted.image) {
                 const oldImagePath = path.join(__dirname, '..', userPosted.image);
                 if (fs.existsSync(oldImagePath)) {
@@ -249,7 +241,6 @@ const updatePost = async(req, res) => {
             const uploadDir = path.join(__dirname, '..', 'uploads', 'posts');
             const fileName = `post-${Date.now()}-${Math.round(Math.random() * 1E9)}${path.extname(image.name)}`;
             const filePath = path.join(uploadDir, fileName);
-            
             await image.mv(filePath);
             updatedData.image = `/uploads/posts/${fileName}`;
         }
@@ -299,7 +290,6 @@ const deletePost = async(req, res) => {
             return res.status(400).json({message: "You are not authorized to delete"});
         }
 
-        // Delete image if exists
         if (userPosted.image) {
             const imagePath = path.join(__dirname, '..', userPosted.image);
             if (fs.existsSync(imagePath)) {
@@ -383,7 +373,6 @@ const likePost = async(req, res) => {
     try {
         const {id} = req.params;
 
-        // Check if post exists
         const post = await prisma.post.findUnique({
             where: { id: Number(id) }
         });
@@ -392,7 +381,6 @@ const likePost = async(req, res) => {
             return res.status(404).json({ message: "Post not found" });
         }
 
-        // Check if user has already liked the post
         const existingLike = await prisma.post.findFirst({
             where: {
                 id: Number(id),
@@ -405,7 +393,6 @@ const likePost = async(req, res) => {
         });
 
         if (existingLike) {
-            // Unlike the post
             await prisma.post.update({
                 where: { id: Number(id) },
                 data: {
@@ -417,7 +404,6 @@ const likePost = async(req, res) => {
                 }
               });
         } else {
-            // Like the post
             await prisma.post.update({
                 where: { id: Number(id) },
                 data: {
@@ -430,7 +416,6 @@ const likePost = async(req, res) => {
             });
         }
 
-        // Get updated post with likes
         const updatedPost = await prisma.post.findUnique({
             where: { id: Number(id) },
             include: {
@@ -485,11 +470,11 @@ const likePost = async(req, res) => {
 
 module.exports = {
     getAllPosts,
-    getUserPosts, 
-    createPost, 
-    updatePost, 
-    deletePost, 
-    createComment, 
+    getUserPosts,
+    createPost,
+    updatePost,
+    deletePost,
+    createComment,
     deleteComment,
     likePost
 };

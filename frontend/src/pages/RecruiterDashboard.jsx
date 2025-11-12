@@ -75,7 +75,7 @@ const RecruiterDashboard = () => {
         <p className="text-gray-600">Your recruiter dashboard is here to help you manage your hiring process.</p>
       </div>
 
-      {/* Stats Overview */}
+      {}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">Active Jobs</h3>
@@ -91,9 +91,9 @@ const RecruiterDashboard = () => {
         </div>
       </div>
 
-      {/* Quick Actions */}
+      {}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Manage Jobs Card */}
+        {}
         <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Manage Jobs</h2>
           <p className="text-gray-600 mb-4">View and manage your job postings.</p>
@@ -105,7 +105,7 @@ const RecruiterDashboard = () => {
           </button>
         </div>
 
-        {/* Applications Card */}
+        {}
         <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Review Applications</h2>
           <p className="text-gray-600 mb-4">Review and manage job applications.</p>
@@ -117,7 +117,7 @@ const RecruiterDashboard = () => {
           </button>
         </div>
 
-        {/* Post Job Card */}
+        {}
         <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Post New Job</h2>
           <p className="text-gray-600 mb-4">Create a new job posting.</p>
@@ -129,7 +129,7 @@ const RecruiterDashboard = () => {
           </button>
         </div>
 
-        {/* Search Candidates Card */}
+        {}
         <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Search Candidates</h2>
           <p className="text-gray-600 mb-4">Find qualified candidates for your positions.</p>
@@ -141,7 +141,7 @@ const RecruiterDashboard = () => {
           </button>
         </div>
 
-        {/* Network Card */}
+        {}
         <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Network</h2>
           <p className="text-gray-600 mb-4">Build your professional network.</p>
@@ -157,4 +157,4 @@ const RecruiterDashboard = () => {
   );
 };
 
-export default RecruiterDashboard; 
+export default RecruiterDashboard;

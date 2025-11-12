@@ -9,7 +9,7 @@ const createToken = (res, userId) => {
         httpOnly: true,
         maxAge: 30 * 24 * 60 * 60 * 1000,
         sameSite: 'lax',
-        path: '/', 
+        path: '/',
     };
 
     if (process.env.NODE_ENV === 'production') {

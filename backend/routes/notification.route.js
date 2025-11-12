@@ -8,16 +8,12 @@ const {
   deleteNotification
 } = require('../controllers/notification.controller');
 
-// Get all notifications for the authenticated user
 router.get('/', authMiddleware, getNotifications);
 
-// Mark a notification as read
 router.put('/:id/read', authMiddleware, markAsRead);
 
-// Mark all notifications as read
 router.put('/read-all', authMiddleware, markAllNotificationsAsRead);
 
-// Delete a notification
 router.delete('/:id', authMiddleware, deleteNotification);
 
-module.exports = router; 
+module.exports = router;

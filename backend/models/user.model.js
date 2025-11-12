@@ -20,6 +20,4 @@ const userSignin = z.object({
     })
 });
 
-
-
 module.exports = { userSignin, userSignup}

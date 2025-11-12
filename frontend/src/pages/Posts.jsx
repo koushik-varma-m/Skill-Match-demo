@@ -36,7 +36,6 @@ const Posts = () => {
     const file = e.target.files[0];
     if (file) {
       setNewPost({ ...newPost, image: file });
-      // Create preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result);
@@ -193,16 +192,20 @@ const Posts = () => {
         {posts.map(post => (
           <div key={post.id} className="card">
             <div className="flex items-center justify-between mb-4">
-              <div 
+              <div
                 className="flex items-center space-x-3 cursor-pointer hover:opacity-80"
                 onClick={() => handleViewProfile(post.user.id)}
               >
                 <div className="w-10 h-10 rounded-full bg-gray-200 overflow-hidden">
                   {post.user.profile?.profilePicture ? (
                     <img
-                      src={`http://localhost:3000${post.user.profile.profilePicture}`}
+                      src={`http://localhost:3000${post.user.profile?.profilePicture}`}
                       alt={post.user.username}
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = '';
+                      }}
                     />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -230,12 +233,15 @@ const Posts = () => {
             </div>
 
             <p className="text-gray-800 mb-4">{post.content}</p>
-            
             {post.image && (
               <img
                 src={`http://localhost:3000${post.image}`}
                 alt="Post"
                 className="rounded-lg max-h-96 w-full object-cover mb-4"
+                onError={(e) => {
+                  console.error('Error loading image:', post.image);
+                  e.target.style.display = 'none';
+                }}
               />
             )}
 
@@ -249,20 +255,24 @@ const Posts = () => {
               </button>
             </div>
 
-            {/* Comments Section */}
+            {}
             <div className="border-t pt-4">
               <div className="space-y-4 mb-4">
                 {post.comments?.map(comment => (
                   <div key={comment.id} className="flex space-x-3">
-                    <div 
+                    <div
                       className="w-8 h-8 rounded-full bg-gray-200 overflow-hidden flex-shrink-0 cursor-pointer hover:opacity-80"
                       onClick={() => handleViewProfile(comment.user.id)}
                     >
                       {comment.user.profile?.profilePicture ? (
                         <img
-                          src={`http://localhost:3000${comment.user.profile.profilePicture}`}
+                          src={`http://localhost:3000${comment.user.profile?.profilePicture}`}
                           alt={comment.user.username}
                           className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.onerror = null;
+                            e.target.src = '';
+                          }}
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm">
@@ -273,7 +283,7 @@ const Posts = () => {
                     <div className="flex-1">
                       <div className="bg-gray-50 rounded-lg p-3">
                         <div className="flex justify-between items-start">
-                          <p 
+                          <p
                             className="font-medium text-sm cursor-pointer hover:opacity-80"
                             onClick={() => handleViewProfile(comment.user.id)}
                           >
@@ -319,4 +329,4 @@ const Posts = () => {
   );
 };
 
-export default Posts; 
+export default Posts;

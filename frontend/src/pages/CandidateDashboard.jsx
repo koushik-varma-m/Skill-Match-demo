@@ -37,7 +37,7 @@ const CandidateDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Job Search Card */}
+        {}
         <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Find Jobs</h2>
           <p className="text-gray-600 mb-4">Search and apply for jobs that match your skills and interests.</p>
@@ -49,7 +49,7 @@ const CandidateDashboard = () => {
           </button>
         </div>
 
-        {/* Applications Card */}
+        {}
         <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">My Applications</h2>
           <p className="text-gray-600 mb-4">Track the status of your job applications.</p>
@@ -61,7 +61,7 @@ const CandidateDashboard = () => {
           </button>
         </div>
 
-        {/* Profile Card */}
+        {}
         <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Update Profile</h2>
           <p className="text-gray-600 mb-4">Keep your profile and skills up to date.</p>
@@ -73,7 +73,7 @@ const CandidateDashboard = () => {
           </button>
         </div>
 
-        {/* Skills Card */}
+        {}
         <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Manage Skills</h2>
           <p className="text-gray-600 mb-4">Update your skills to match job requirements.</p>
@@ -85,7 +85,7 @@ const CandidateDashboard = () => {
           </button>
         </div>
 
-        {/* Network Card */}
+        {}
         <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition-shadow">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Network</h2>
           <p className="text-gray-600 mb-4">Build your professional network.</p>
@@ -101,4 +101,4 @@ const CandidateDashboard = () => {
   );
 };
 
-export default CandidateDashboard; 
+export default CandidateDashboard;

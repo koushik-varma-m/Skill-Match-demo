@@ -22,6 +22,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
+# Application logs
+logs/*.log
+*.log
+
 # IDE
 .idea/
 .vscode/
@@ -30,7 +34,26 @@ yarn-error.log*
 
 # OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.pyc
+.pytest_cache/
+
+# Python virtual environment (uncomment if not committing venv)
+# venv/
+# env/
+# ENV/
 
 # Prisma
 /prisma/migrations/

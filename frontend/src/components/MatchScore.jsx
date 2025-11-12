@@ -55,4 +55,4 @@ const MatchScore = ({ score }) => {
   );
 };
 
-export default MatchScore; 
+export default MatchScore;
