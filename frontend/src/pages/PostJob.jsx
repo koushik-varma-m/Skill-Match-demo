@@ -12,7 +12,7 @@ const PostJob = () => {
     title: '',
     company: '',
     location: '',
-    type: 'FULL_TIME', // FULL_TIME, PART_TIME, CONTRACT, INTERNSHIP
+    type: 'FULL_TIME', 
     description: '',
     requirements: '',
     salary: '',
@@ -35,7 +35,6 @@ const PostJob = () => {
     setError('');
 
     try {
-      // Convert skills string to array (handle empty string)
       const skillsArray = formData.skills && formData.skills.trim() 
         ? formData.skills.split(',').map(skill => skill.trim()).filter(skill => skill !== '')
         : [];
@@ -58,7 +57,7 @@ const PostJob = () => {
       );
 
       console.log('Job posted successfully:', response.data);
-      navigate('/jobs'); // Redirect to jobs list
+        navigate('/jobs'); 
     } catch (err) {
       console.error('Error posting job:', err);
       setError(err.response?.data?.message || 'Failed to post job');

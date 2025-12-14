@@ -18,17 +18,14 @@ const Login = () => {
     try {
       const result = await login(email, password);
       if (result.success) {
-        // Get the user role from the auth context
         const userRole = result.user?.role;
         
-        // Redirect based on role
         if (userRole === 'RECRUITER') {
           navigate('/recruiter/dashboard');
         } else {
           navigate('/candidate/dashboard');
         }
       } else {
-        // Handle validation errors or other errors
         if (result.errors && Array.isArray(result.errors)) {
           const errorMessages = result.errors.map(err => `${err.field}: ${err.message}`).join(', ');
           setError(errorMessages);

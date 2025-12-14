@@ -23,7 +23,6 @@ const Register = () => {
       ...prev,
       [name]: value
     }));
-    // Clear field error when user starts typing
     if (fieldErrors[name]) {
       setFieldErrors(prev => {
         const newErrors = { ...prev };
@@ -44,7 +43,6 @@ const Register = () => {
       if (result.success) {
         navigate('/login');
       } else {
-        // Handle validation errors
         if (result.errors && Array.isArray(result.errors)) {
           const errorsObj = {};
           result.errors.forEach(err => {

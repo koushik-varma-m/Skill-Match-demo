@@ -1,7 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Create a new notification
 const createNotification = async (userId, type, message) => {
   try {
     const notification = await prisma.notification.create({
@@ -19,7 +18,6 @@ const createNotification = async (userId, type, message) => {
   }
 };
 
-// Get all notifications for a user
 const getNotifications = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -39,7 +37,6 @@ const getNotifications = async (req, res) => {
   }
 };
 
-// Mark a notification as read
 const markAsRead = async (req, res) => {
   try {
     const { id } = req.params;
@@ -61,8 +58,6 @@ const markAsRead = async (req, res) => {
     res.status(500).json({ message: 'Error marking notification as read' });
   }
 };
-
-// Mark all notifications as read
 const markAllNotificationsAsRead = async (req, res) => {
   try {
     const userId = req.user.id;
@@ -82,18 +77,15 @@ const markAllNotificationsAsRead = async (req, res) => {
   }
 };
 
-// Delete a notification
 const deleteNotification = async (req, res) => {
   try {
     const { id } = req.params;
     const userId = req.user?.id;
 
-    // Validate id parameter
     if (!id || id === 'undefined' || id === 'null') {
       return res.status(400).json({ message: 'Notification ID is required' });
     }
 
-    // Parse and validate the ID
     const notificationId = Number.parseInt(id, 10);
     if (Number.isNaN(notificationId) || notificationId <= 0) {
       return res.status(400).json({ message: 'Invalid notification ID format' });
@@ -103,7 +95,6 @@ const deleteNotification = async (req, res) => {
       return res.status(401).json({ message: 'User not authenticated' });
     }
 
-    // Verify the notification belongs to the user before deleting
     const notification = await prisma.notification.findFirst({
       where: {
         id: notificationId,
@@ -115,7 +106,6 @@ const deleteNotification = async (req, res) => {
       return res.status(404).json({ message: 'Notification not found' });
     }
 
-    // Delete the notification
     await prisma.notification.delete({
       where: {
         id: notificationId,

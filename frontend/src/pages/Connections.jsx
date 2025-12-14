@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
+import axios from 'axios';      
 import { useNavigate } from 'react-router-dom';
 
 const Connections = () => {
@@ -14,7 +13,6 @@ const Connections = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(true);
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const handleViewProfile = (userId) => {
@@ -28,11 +26,9 @@ const Connections = () => {
       await fetchConnections();
       const requests = await fetchSentRequests();
       await fetchReceivedRequests();
-      // Get user IDs from sent requests to exclude from suggestions
       const excludeUserIds = requests
         .map(req => req.receiverId || (req.receiver && req.receiver.id))
         .filter(id => id !== undefined);
-      // Fetch suggestions after sent requests so we can filter them
       await fetchSuggestions(excludeUserIds);
     };
     loadData();
@@ -84,7 +80,6 @@ const Connections = () => {
         withCredentials: true
       });
       console.log('Received requests response:', response.data);
-      // The response might be nested under a property, let's handle both cases
       const requests = response.data?.connection || response.data || [];
       setReceivedRequests(requests);
     } catch (err) {
@@ -106,8 +101,6 @@ const Connections = () => {
       });
       console.log('Suggestions response:', response.data);
       let suggestions = response.data || [];
-      
-      // Filter out users who are already in sent requests (fallback check)
       if (excludeUserIds.length > 0) {
         const excludeSet = new Set(excludeUserIds);
         console.log('Filtering suggestions - excluding user IDs:', Array.from(excludeSet));
@@ -158,30 +151,24 @@ const Connections = () => {
       
       const connectionData = response.data;
       console.log('Full connection data:', JSON.stringify(connectionData, null, 2));
-      
-      // Get receiver ID - Prisma includes receiverId in the response
       const receiverId = connectionData.receiverId || (connectionData.receiver && connectionData.receiver.id);
       
       if (!receiverId) {
         console.error('No receiver ID in response:', connectionData);
-        // Fallback: fetch sent requests after a delay
         setTimeout(async () => {
           await fetchSentRequests();
         }, 500);
         return;
       }
-      
-      // Get receiver info from response
+    
       const receiverInfo = connectionData.receiver;
       
-      // Remove user from suggestions immediately (do this regardless of receiver info)
       setSuggestions(prev => {
         const filtered = prev.filter(user => user.id !== userId);
         console.log('Removed user from suggestions. Remaining:', filtered.length);
         return filtered;
       });
       
-      // Update the search results to reflect the sent request
       setSearchResults(prev => 
         prev.map(user => 
           user.id === userId 
@@ -191,7 +178,7 @@ const Connections = () => {
       );
       
       if (receiverInfo) {
-        // Create sent request object from response
+
         const newSentRequest = {
           id: connectionData.id,
           receiverId: receiverId,
@@ -202,9 +189,7 @@ const Connections = () => {
         
         console.log('Adding sent request to state:', newSentRequest);
         
-        // Update sent requests state immediately
         setSentRequests(prev => {
-          // Check if this request already exists
           const exists = prev.some(req => req.id === newSentRequest.id || req.receiverId === receiverId);
           if (exists) {
             console.log('Request already exists in state, updating...');
@@ -218,20 +203,17 @@ const Connections = () => {
           return [...prev, newSentRequest];
         });
         
-        // Refresh sent requests from backend after a delay to ensure we have the latest data
         setTimeout(async () => {
           console.log('Refreshing sent requests from backend to sync...');
           await fetchSentRequests();
         }, 300);
       } else {
         console.warn('No receiver info in response, fetching from backend...');
-        // Fallback: fetch sent requests to get full data
         setTimeout(async () => {
           await fetchSentRequests();
         }, 300);
       }
       
-      // Refresh suggestions after a delay to ensure backend has updated and excludes this user
       setTimeout(() => {
         console.log('Refreshing suggestions from backend...');
         fetchSuggestions([receiverId]);
@@ -244,20 +226,16 @@ const Connections = () => {
 
   const handleAcceptRequest = async (requestId) => {
     try {
-      // Debug logging
       console.log('=== Accept Request Debug ===');
       console.log('Request ID:', requestId);
-      console.log('Current user:', user);
       console.log('Received requests:', receivedRequests);
 
-      // Validate request ID
       if (!requestId) {
         console.error('No request ID provided');
         setError('Invalid request ID');
         return;
       }
 
-      // Find the request in our local state
       const request = receivedRequests.find(r => r.id === requestId);
       console.log('Found request in local state:', request);
 
@@ -280,15 +258,13 @@ const Connections = () => {
       
       console.log('Accept request response:', response.data);
       
-      // Refresh all connection-related data
       await Promise.all([
         fetchConnections(),
         fetchReceivedRequests(),
         fetchSentRequests(),
-        fetchSuggestions() // Refresh suggestions since user is now connected
+        fetchSuggestions() 
       ]);
 
-      // Clear any existing error
       setError('');
     } catch (err) {
       console.error('Error accepting request:', {
@@ -296,7 +272,6 @@ const Connections = () => {
         response: err.response?.data,
         status: err.response?.status,
         requestId,
-        userId: user?.id,
         receivedRequests
       });
       setError(err.response?.data?.message || 'Failed to accept connection request');
@@ -308,12 +283,11 @@ const Connections = () => {
       await axios.put(`http://localhost:3000/api/connection/remove/${requestId}`, {}, {
         withCredentials: true
       });
-      // Refresh all connection-related data
       await Promise.all([
         fetchConnections(),
         fetchSentRequests(),
         fetchReceivedRequests(),
-        fetchSuggestions() // Refresh suggestions so the user can appear again
+        fetchSuggestions() 
       ]);
       setError('');
     } catch (err) {
@@ -338,7 +312,6 @@ const Connections = () => {
         </div>
       )}
 
-      {/* Search Section */}
       <div key="search-section" className="mb-8">
         <h2 className="text-xl font-bold mb-4">Find People</h2>
         <form onSubmit={handleSearch} className="flex gap-2 mb-4">
@@ -417,7 +390,6 @@ const Connections = () => {
         )}
       </div>
 
-      {/* Suggested Connections */}
       <div key="suggestions-section" className="mb-8">
         <h2 className="text-xl font-bold mb-4">Suggested Connections</h2>
         {suggestionsLoading ? (
@@ -496,7 +468,6 @@ const Connections = () => {
         )}
       </div>
 
-      {/* Sent Connection Requests */}
       <div key="sent-requests-section" className="mb-8">
         <h2 className="text-xl font-bold mb-4">Sent Requests</h2>
         {sentRequests && Array.isArray(sentRequests) && sentRequests.length > 0 ? (
@@ -569,7 +540,6 @@ const Connections = () => {
         )}
       </div>
 
-      {/* Received Connection Requests */}
       {receivedRequests?.filter(request => request && request.status === 'PENDING').length > 0 && (
         <div key="received-requests-section" className="mb-8">
           <h2 className="text-xl font-bold mb-4">Connection Requests</h2>
@@ -616,7 +586,6 @@ const Connections = () => {
         </div>
       )}
 
-      {/* Connections List */}
       <div key="connections-section">
         <h2 className="text-xl font-bold mb-4">Your Connections</h2>
         {!connections || connections.length === 0 ? (
@@ -627,9 +596,9 @@ const Connections = () => {
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {connections
-              .filter(connection => connection && connection.id) // Filter out invalid connections
+              .filter(connection => connection && connection.id) 
               .map((connection, index) => {
-                console.log('Connection data:', connection); // Debug log
+              console.log('Connection data:', connection); 
                 return (
                   <div 
                     key={`connection-${connection.id || `temp-${index}`}`} 
@@ -662,7 +631,7 @@ const Connections = () => {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            console.log('Removing connection:', connection); // Debug log
+                            console.log('Removing connection:', connection); 
                             handleRemoveConnection(connection.connectionId || connection.id);
                           }}
                           className="text-red-600 hover:text-red-800 text-sm"

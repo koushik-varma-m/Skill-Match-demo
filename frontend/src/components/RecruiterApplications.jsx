@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const RecruiterApplications = () => {
   const [applications, setApplications] = useState([]);
   const [error, setError] = useState('');
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const handleViewProfile = (userId) => {
@@ -43,7 +41,6 @@ const RecruiterApplications = () => {
           }
         }
       );
-      // Refresh applications after update
       fetchApplications();
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update application status');

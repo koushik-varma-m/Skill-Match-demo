@@ -20,12 +20,10 @@ const Navbar = () => {
         withCredentials: true,
       });
       const allNotifications = response.data;
-      // Only update unread count if we're not skipping it (e.g., after marking all as read)
       if (!skipUnreadUpdate) {
         const unread = allNotifications.filter(n => !n.read).length;
         setUnreadCount(unread);
       }
-      // Store first 3 notifications for dropdown
       setNotifications(allNotifications.slice(0, 3));
     } catch (error) {
       console.error('Error fetching notifications:', error);
@@ -37,7 +35,6 @@ const Navbar = () => {
   const deleteNotification = async (notificationId, e) => {
     e.stopPropagation();
     
-    // Validate notificationId
     if (!notificationId) {
       console.error('Invalid notification ID:', notificationId);
       return;
@@ -47,14 +44,11 @@ const Navbar = () => {
       await axios.delete(`http://localhost:3000/api/notifications/${notificationId}`, {
         withCredentials: true,
       });
-      
-      // Remove from local state
+
       const updatedNotifications = notifications.filter(n => n.id !== notificationId);
       setNotifications(updatedNotifications);
-      // Recalculate unread count from remaining notifications
       const unread = updatedNotifications.filter(n => !n.read).length;
       setUnreadCount(unread);
-      // Refresh all notifications to get updated list and sync unread count
       fetchNotifications();
     } catch (error) {
       console.error('Error deleting notification:', error);
@@ -66,7 +60,6 @@ const Navbar = () => {
   useEffect(() => {
     if (user) {
       fetchNotifications();
-      // Poll for new notifications every minute
       const interval = setInterval(fetchNotifications, 60000);
       return () => clearInterval(interval);
     }
@@ -74,11 +67,9 @@ const Navbar = () => {
 
   const markAllAsRead = async () => {
     try {
-      // Immediately clear the badge (optimistic update) - badge disappears instantly
       setUnreadCount(0);
       setNotifications(prev => prev.map(n => ({ ...n, read: true })));
       
-      // Mark all notifications as read on backend
       await axios.put('http://localhost:3000/api/notifications/read-all', {}, {
         withCredentials: true,
       });
@@ -87,7 +78,6 @@ const Navbar = () => {
     }
   };
 
-  // Close dropdown when clicking outside and mark as read when opened
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (notificationRef.current && !notificationRef.current.contains(event.target)) {
@@ -97,12 +87,8 @@ const Navbar = () => {
 
     if (showNotifications) {
       document.addEventListener('mousedown', handleClickOutside);
-      // Immediately clear badge when dropdown opens (optimistic update)
       setUnreadCount(0);
-      // Mark all notifications as read and then fetch updated list
       markAllAsRead().then(() => {
-        // After marking as read, fetch notifications but don't update unread count
-        // since we just marked them all as read
         fetchNotifications(true);
       });
       return () => {

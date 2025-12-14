@@ -29,7 +29,6 @@ const sendConnectionRequest = async(req,res) => {
             return res.status(400).json({ message: 'Connection already exists' });
         }
 
-        // Create connection request
         const connection = await prisma.connection.create({
             data: {
                 sender: {
@@ -92,7 +91,6 @@ const acceptConnectionRequest = async(req,res) => {
             return res.status(400).json({ message: 'Connection ID is required' });
         }
 
-        // First verify that this connection exists and belongs to the user
         const existingConnection = await prisma.connection.findFirst({
             where: {
                 id: connectionId,
@@ -105,7 +103,6 @@ const acceptConnectionRequest = async(req,res) => {
             return res.status(404).json({ message: 'Connection request not found' });
         }
 
-        // Update connection status
         const connection = await prisma.connection.update({
             where: {
                 id: connectionId
@@ -119,7 +116,6 @@ const acceptConnectionRequest = async(req,res) => {
             }
         });
 
-        // Create notification for sender
         await createNotification(
             connection.senderId,
             'CONNECTION_ACCEPTED',
@@ -142,7 +138,6 @@ const removeConnection = async(req,res) => {
         console.log('Request params:', req.params);
         console.log('User ID:', userId);
 
-        // Validate request ID
         if (!requestId) {
             console.log('No request ID provided');
             return res.status(400).json({message: "Request ID is required"});
@@ -154,7 +149,6 @@ const removeConnection = async(req,res) => {
             return res.status(400).json({message: "Invalid request ID format"});
         }
 
-        // Find the connection
         const connection = await prisma.connection.findFirst({
             where: {id: requestIdNum}
         });
@@ -166,7 +160,6 @@ const removeConnection = async(req,res) => {
             return res.status(404).json({message: "Connection not found"});
         }
 
-        // Check if user is authorized to remove this connection
         const isAuthorized = connection.receiverId.toString() === userId.toString() || 
                            connection.senderId.toString() === userId.toString();
 
@@ -189,7 +182,6 @@ const removeConnection = async(req,res) => {
             });
         }
 
-        // Delete the connection
         const deletedConnection = await prisma.connection.delete({
             where: {id: requestIdNum}
         });
@@ -217,7 +209,7 @@ const getConnectionSentRequests = async(req,res) => {
         const requests = await prisma.connection.findMany({
             where: {
                 senderId: userId,
-                status: 'PENDING' // Only return pending requests
+                status: 'PENDING'
             },
             select:{
                 id: true,
@@ -261,7 +253,6 @@ const getConnectionSentRequests = async(req,res) => {
         console.log('Returning sent requests:', requestsProfile.length);
         console.log('Sent requests data:', JSON.stringify(requestsProfile, null, 2));
         
-        // Always return an array, even if empty
         res.json({
             message: "Requests Sent", 
             connection: requestsProfile || []
@@ -280,7 +271,7 @@ const getConnectionReceivedRequests = async(req,res) => {
         const requests = await prisma.connection.findMany({
             where: {
                 receiverId: userId,
-                status: "PENDING"  // Only get pending requests
+                status: "PENDING"
             },
             select: {
                 id: true,
@@ -374,7 +365,7 @@ const getUserConnections = async(req,res) => {
 
             return {
                 ...user,
-                connectionId: connection.id // Include the connection ID
+                        connectionId: connection.id
             };
         }));
 

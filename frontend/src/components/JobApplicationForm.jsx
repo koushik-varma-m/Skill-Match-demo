@@ -39,8 +39,7 @@ const JobApplicationForm = ({ job, onClose, onSuccess }) => {
         return;
       }
 
-      const formDataToSend = new FormData();
-      // Only append coverLetter if it's not empty
+      const formDataToSend = new FormData();                              
       if (formData.coverLetter && formData.coverLetter.trim()) {
         formDataToSend.append('coverLetter', formData.coverLetter.trim());
       }

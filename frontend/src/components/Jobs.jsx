@@ -53,10 +53,9 @@ const JobList = ({ onEditJob, onDeleteJob, onPostNewJob }) => {
 
   useEffect(() => {
     fetchJobs();
-  }, []); // Only fetch on initial load
+  }, []); 
 
   useEffect(() => {
-    // Filter jobs based on quick search
     if (quickSearch.trim() === '') {
       setFilteredJobs(jobs);
     } else {
@@ -96,11 +95,11 @@ const JobList = ({ onEditJob, onDeleteJob, onPostNewJob }) => {
   };
 
   const handleEditClick = (job) => {
-    console.log('Edit button clicked for job:', job); // Debug log
+    console.log('Edit button clicked for job:', job); 
     if (onEditJob) {
       onEditJob(job);
     } else {
-      console.error('onEditJob prop is not provided'); // Debug log
+      console.error('onEditJob prop is not provided'); 
     }
   };
 
@@ -108,7 +107,6 @@ const JobList = ({ onEditJob, onDeleteJob, onPostNewJob }) => {
     if (window.confirm('Are you sure you want to delete this job posting?')) {
       try {
         await onDeleteJob(jobId);
-        // Refresh the jobs list after deletion
         fetchJobs();
       } catch (err) {
         console.error('Error deleting job:', err);
@@ -121,7 +119,7 @@ const JobList = ({ onEditJob, onDeleteJob, onPostNewJob }) => {
   };
 
   const handleApplicationSuccess = () => {
-    fetchJobs(); // Refresh the job list after successful application
+    fetchJobs(); 
     setSelectedJob(null);
   };
 
@@ -145,7 +143,6 @@ const JobList = ({ onEditJob, onDeleteJob, onPostNewJob }) => {
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-2xl font-bold mb-6">Available Jobs</h1>
       
-      {/* Quick Search Bar */}
       <div className="mb-8">
         <div className="relative">
           <input
@@ -163,7 +160,6 @@ const JobList = ({ onEditJob, onDeleteJob, onPostNewJob }) => {
         </div>
       </div>
 
-      {/* Advanced Filters */}
       <div className="mb-8 bg-white p-6 rounded-lg shadow-lg">
         <h2 className="text-lg font-semibold mb-4">Advanced Filters</h2>
         <form onSubmit={handleSearchSubmit} className="space-y-4">
@@ -238,7 +234,6 @@ const JobList = ({ onEditJob, onDeleteJob, onPostNewJob }) => {
           </div>
         </form>
 
-        {/* Post a New Job Button - Only visible to recruiters */}
         {user?.role === 'RECRUITER' && (
           <div className="mt-6 flex justify-end">
             <button

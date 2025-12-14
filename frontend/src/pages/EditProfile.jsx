@@ -131,7 +131,6 @@ const EditProfile = () => {
     }
   };
 
-  // Experience handlers
   const handleAddExperience = () => {
     setEditingExperience({
       company: '',
@@ -162,7 +161,6 @@ const EditProfile = () => {
         return;
       }
 
-      // Validate fromMonth and fromYear
       if (!editingExperience.fromMonth || !editingExperience.fromYear) {
         setError('From month and year are required');
         return;
@@ -182,7 +180,6 @@ const EditProfile = () => {
 
       let response;
       if (editingExperience.id) {
-        // Update existing
         console.log('Updating experience:', editingExperience.id);
         response = await axios.put(`http://localhost:3000/api/user/experience/${editingExperience.id}`, experienceData, {
           withCredentials: true,
@@ -191,7 +188,6 @@ const EditProfile = () => {
           }
         });
       } else {
-        // Create new
         console.log('Creating new experience');
         response = await axios.post('http://localhost:3000/api/user/experience', experienceData, {
           withCredentials: true,
@@ -225,7 +221,6 @@ const EditProfile = () => {
     }
   };
 
-  // Education handlers
   const handleAddEducation = () => {
     setEditingEducation({
       institution: '',
@@ -256,7 +251,6 @@ const EditProfile = () => {
         return;
       }
 
-      // Validate fromMonth and fromYear
       if (!editingEducation.fromMonth || !editingEducation.fromYear) {
         setError('From month and year are required');
         return;
@@ -760,7 +754,6 @@ const EditProfile = () => {
             </div>
           </div>
 
-          {/* Save Changes Button for About and Skills */}
           <div className="flex justify-end space-x-4 pt-4 border-t">
             <button
               type="button"

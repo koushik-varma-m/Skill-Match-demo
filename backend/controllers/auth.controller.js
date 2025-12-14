@@ -10,7 +10,6 @@ const createUser = async (req,res) => {
     try {
         const { firstname, lastname, email, role, password, username } = userSignup.parse(req.body);
         
-        // Check for existing email
         const existingEmail = await prisma.user.findUnique({
             where: { email }
         });
@@ -22,7 +21,6 @@ const createUser = async (req,res) => {
             return;
         }
 
-        // Check for existing username
         const existingUsername = await prisma.user.findUnique({
             where: { username }
         });
@@ -78,7 +76,6 @@ const createUser = async (req,res) => {
     } catch (error) {
         console.error('Validation error:', error);
         
-        // Handle Zod validation errors
         if (error.name === 'ZodError') {
             const validationErrors = error.errors.map(err => ({
                 field: err.path.join('.'),
@@ -135,7 +132,6 @@ const loginUser = async (req,res) => {
             }
 
             if (result) {
-                // Remove password from user object
                 const { password, ...userWithoutPassword } = user;
                 const token = createToken(res, user.id);
                 res.status(200).json({
@@ -152,7 +148,6 @@ const loginUser = async (req,res) => {
     } catch (error) {
         console.error('Login error:', error);
         
-        // Handle Zod validation errors
         if (error.name === 'ZodError') {
             const validationErrors = error.errors.map(err => ({
                 field: err.path.join('.'),

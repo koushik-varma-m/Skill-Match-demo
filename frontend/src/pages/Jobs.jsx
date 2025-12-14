@@ -28,7 +28,6 @@ const Jobs = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Check if we should show the job form from navigation state
     if (location.state?.showJobForm) {
       setShowJobForm(true);
     }
@@ -55,7 +54,6 @@ const Jobs = () => {
   const handleCreateJob = async (e) => {
     e.preventDefault();
     try {
-      // Convert skills string to array and trim whitespace (handle empty string)
       const skillsArray = newJob.skills && newJob.skills.trim() 
         ? newJob.skills.split(',').map(skill => skill.trim()).filter(skill => skill !== '')
         : [];
@@ -65,33 +63,30 @@ const Jobs = () => {
         skills: skillsArray
       };
 
-      // Ensure all string fields are not null
       Object.keys(jobData).forEach(key => {
         if (typeof jobData[key] === 'string') {
           jobData[key] = jobData[key] || '';
         }
       });
 
-      console.log('Sending job data:', jobData); // Debug log
+        console.log('Sending job data:', jobData); 
 
       if (isEditing && selectedJob?.id) {
-        // Update existing job
         const response = await axios.put(`http://localhost:3000/api/job/${selectedJob.id}`, jobData, {
           withCredentials: true,
           headers: {
             'Content-Type': 'application/json'
           }
         });
-        console.log('Update response:', response.data); // Debug log
+        console.log('Update response:', response.data); 
       } else {
-        // Create new job
         const response = await axios.post('http://localhost:3000/api/job', jobData, {
           withCredentials: true,
           headers: {
             'Content-Type': 'application/json'
           }
         });
-        console.log('Create response:', response.data); // Debug log
+        console.log('Create response:', response.data); 
       }
 
       resetJobForm();
@@ -108,7 +103,7 @@ const Jobs = () => {
   };
 
   const handleEditJob = (job) => {
-    console.log('handleEditJob called with job:', job); // Debug log
+      console.log('handleEditJob called with job:', job); 
     setSelectedJob(job);
     setNewJob({
       title: job.title || '',
@@ -155,7 +150,6 @@ const Jobs = () => {
         </div>
       )}
 
-      {/* Job List Component */}
       <JobList 
         onEditJob={handleEditJob} 
         onApply={handleApply} 
@@ -163,7 +157,6 @@ const Jobs = () => {
         onPostNewJob={() => setShowJobForm(true)}
       />
 
-      {/* Job Form Modal */}
       {showJobForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -346,7 +339,6 @@ const Jobs = () => {
         </div>
       )}
 
-      {/* Application Form Modal */}
       {showApplicationForm && selectedJob && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">

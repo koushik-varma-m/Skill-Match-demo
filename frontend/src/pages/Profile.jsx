@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
+import axios from 'axios';              
 
 const Profile = () => {
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const { userId } = useParams();
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,16 +15,13 @@ const Profile = () => {
 
   const fetchProfile = async () => {
     try {
-      // If no userId in params, fetch current user's profile
       const endpoint = userId ? `/api/user/${userId}` : '/api/user/profile';
       const response = await axios.get(`http://localhost:3000${endpoint}`, {
         withCredentials: true
       });
       
-      // Handle both response formats
       let profileData = userId ? response.data.user : response.data;
       
-      // If profile has nested profile object, extract it
       if (profileData.profile) {
         profileData = {
           ...profileData,

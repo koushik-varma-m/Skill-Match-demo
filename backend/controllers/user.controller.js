@@ -5,11 +5,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Configure multer for file upload
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         const uploadDir = path.join(__dirname, '..', 'uploads', 'profile');
-        // Create directory if it doesn't exist
         if (!fs.existsSync(uploadDir)) {
             fs.mkdirSync(uploadDir, { recursive: true });
         }
@@ -22,7 +20,6 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req, file, cb) => {
-    // Accept images only
     if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
         return cb(new Error('Only image files are allowed!'), false);
     }
@@ -32,7 +29,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB limit
+        fileSize: 5 * 1024 * 1024
     },
     fileFilter: fileFilter
 });
@@ -47,7 +44,6 @@ const getProfile = async(req, res) => {
     try {
     const userId = req.user.id;
         
-        // Get user data
         const user = await prisma.user.findUnique({
             where: { id: userId },
             select: {
@@ -66,7 +62,6 @@ const getProfile = async(req, res) => {
             });
         }
 
-        // Get profile data with experiences and educations
     const profile = await prisma.profile.findUnique({
             where: { userId: userId },
             include: {
@@ -85,14 +80,13 @@ const getProfile = async(req, res) => {
             }
         });
 
-        // Combine user and profile data, with default values for profile fields
         res.json({
             ...user,
             profilePicture: profile?.profilePicture || null,
             about: profile?.about || null,
             skills: profile?.skills || [],
-            experience: profile?.experience || [], // Keep for backward compatibility
-            education: profile?.education || [], // Keep for backward compatibility
+            experience: profile?.experience || [],
+            education: profile?.education || [],
             experiences: profile?.experiences || [],
             educations: profile?.educations || []
         });
@@ -106,7 +100,6 @@ const getProfile = async(req, res) => {
 
 const updateProfile = async(req, res) => {
     try {
-        // Add these debug logs
         console.log('=== Debug Info ===');
         console.log('Headers:', req.headers);
         console.log('Content-Type:', req.headers['content-type']);
@@ -120,28 +113,23 @@ const updateProfile = async(req, res) => {
         const allowedFields = ["about", "skills", "experience", "education"];
         const updatedData = {};
 
-        // Handle file upload
         if (req.file) {
             console.log('File uploaded:', req.file);
             updatedData.profilePicture = `/uploads/profile/${req.file.filename}`;
         }
 
-        // Handle other fields
     for(const field of allowedFields) {
             if (req.body[field] !== undefined) {
                 console.log(`Processing field ${field}:`, req.body[field]);
                 if (field === 'skills') {
-                    // Handle skills as comma-separated string
                     updatedData[field] = typeof req.body[field] === 'string' 
                         ? req.body[field].split(',').map(skill => skill.trim()).filter(Boolean)
                         : req.body[field];
                 } else if (field === 'experience' || field === 'education') {
-                    // Handle experience and education as newline-separated strings
                     updatedData[field] = typeof req.body[field] === 'string'
                         ? req.body[field].split('\n').map(item => item.trim()).filter(Boolean)
                         : req.body[field];
                 } else {
-                    // Handle about as plain string
             updatedData[field] = req.body[field];
         }
     }
@@ -149,7 +137,6 @@ const updateProfile = async(req, res) => {
 
         console.log('Updated data:', updatedData);
 
-        // Get existing profile
         const existingProfile = await prisma.profile.findUnique({
             where: { userId: userId }
         });
@@ -158,7 +145,6 @@ const updateProfile = async(req, res) => {
 
         let profile;
         if (!existingProfile) {
-            // Create new profile if it doesn't exist
             profile = await prisma.profile.create({
                 data: {
                     userId: userId,
@@ -167,7 +153,6 @@ const updateProfile = async(req, res) => {
             });
             console.log('New profile created:', profile);
         } else {
-            // Update existing profile
             profile = await prisma.profile.update({
                 where: { userId: userId },
         data: updatedData
@@ -175,7 +160,6 @@ const updateProfile = async(req, res) => {
             console.log('Profile updated:', profile);
         }
 
-        // Get updated user data
         const user = await prisma.user.findUnique({
             where: { id: userId },
             select: {
@@ -190,7 +174,6 @@ const updateProfile = async(req, res) => {
 
         console.log('User data retrieved:', user);
 
-        // Get updated profile with experiences and educations
         const updatedProfile = await prisma.profile.findUnique({
             where: { userId: userId },
             include: {
@@ -209,7 +192,6 @@ const updateProfile = async(req, res) => {
             }
         });
 
-        // Combine user and profile data in response
     res.json({
             ...user,
             profilePicture: updatedProfile.profilePicture,
@@ -322,7 +304,6 @@ const searchUsers = async (req, res) => {
             return res.status(400).json({ message: "Search query is required" });
         }
 
-        // Search users by name or email
         const users = await prisma.user.findMany({
             where: {
                 AND: [
@@ -333,7 +314,7 @@ const searchUsers = async (req, res) => {
                             { email: { contains: q, mode: 'insensitive' } }
                         ]
                     },
-                    { id: { not: currentUserId } } // Exclude current user
+                    { id: { not: currentUserId } }
                 ]
             },
             select: {
@@ -350,7 +331,6 @@ const searchUsers = async (req, res) => {
             }
         });
 
-        // Get connection status for each user
         const usersWithConnectionStatus = await Promise.all(users.map(async (user) => {
             const connection = await prisma.connection.findFirst({
                 where: {
@@ -389,7 +369,6 @@ const getSuggestions = async (req, res) => {
 
         console.log('Getting suggestions for user:', currentUserId);
 
-        // Get current user's profile with skills
         const currentUser = await prisma.user.findUnique({
             where: { id: currentUserId },
             include: {
@@ -408,7 +387,6 @@ const getSuggestions = async (req, res) => {
 
         console.log('Current user skills:', currentUser.profile?.skills);
 
-        // Get all connections (any status) for current user to exclude from suggestions
         const userConnections = await prisma.connection.findMany({
             where: {
                 OR: [
@@ -426,17 +404,14 @@ const getSuggestions = async (req, res) => {
 
         console.log('All connections for user', currentUserId, ':', userConnections.length, userConnections);
 
-        // Get all user IDs that have any connection status with current user
         const excludedUserIds = userConnections.map(conn => 
             conn.senderId === currentUserId ? conn.receiverId : conn.senderId
         );
 
         console.log('Excluded user IDs (any connection status):', excludedUserIds);
 
-        // Build list of all IDs to exclude (current user + users with any connection)
         const allExcludedIds = [currentUserId, ...excludedUserIds];
 
-        // Get all users except current user and users with any connection status
         const users = await prisma.user.findMany({
             where: {
                 id: { notIn: allExcludedIds }
@@ -459,7 +434,6 @@ const getSuggestions = async (req, res) => {
 
         console.log('Found potential users:', users.length);
 
-        // Add matching skills and connection status
         const suggestions = users.map(user => {
             const userSkills = user.profile?.skills || [];
             const currentUserSkills = currentUser.profile?.skills || [];
@@ -467,7 +441,6 @@ const getSuggestions = async (req, res) => {
                 currentUserSkills.includes(skill)
             );
 
-            // Calculate a score based on matching skills and role
             const skillScore = matchingSkills.length;
             const roleScore = user.role === currentUser.role ? 1 : 0;
             const totalScore = skillScore + roleScore;
@@ -480,7 +453,6 @@ const getSuggestions = async (req, res) => {
             };
         });
 
-        // Sort by score
         suggestions.sort((a, b) => b.score - a.score);
 
         console.log('Returning suggestions:', suggestions.length);
@@ -500,7 +472,6 @@ const getSuggestions = async (req, res) => {
     }
 };
 
-// Experience CRUD operations
 const createExperience = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -517,7 +488,6 @@ const createExperience = async (req, res) => {
         console.log('ToYear:', toYear, typeof toYear);
         console.log('IsCurrent:', isCurrent, typeof isCurrent);
 
-        // Validate required fields
         if (!company || !description) {
             return res.status(400).json({
                 message: "Company and description are required"
@@ -530,7 +500,6 @@ const createExperience = async (req, res) => {
             });
         }
 
-        // Parse and validate month range (1-12)
         const parsedFromMonth = Number.parseInt(fromMonth, 10);
         const parsedFromYear = Number.parseInt(fromYear, 10);
         const parsedToMonth = toMonth ? Number.parseInt(toMonth, 10) : null;
@@ -554,7 +523,6 @@ const createExperience = async (req, res) => {
             });
         }
 
-        // Get or create profile
         let profile = await prisma.profile.findUnique({
             where: { userId }
         });
@@ -608,7 +576,6 @@ const updateExperience = async (req, res) => {
             });
         }
 
-        // Verify ownership
         const profile = await prisma.profile.findUnique({
             where: { userId }
         });
@@ -632,7 +599,6 @@ const updateExperience = async (req, res) => {
             });
         }
 
-        // Parse and validate month range
         const parsedFromMonth = fromMonth !== undefined ? Number.parseInt(fromMonth, 10) : existingExperience.fromMonth;
         const parsedFromYear = fromYear !== undefined ? Number.parseInt(fromYear, 10) : existingExperience.fromYear;
         const parsedToMonth = toMonth !== undefined ? (toMonth ? Number.parseInt(toMonth, 10) : null) : existingExperience.toMonth;
@@ -688,7 +654,6 @@ const deleteExperience = async (req, res) => {
             });
         }
 
-        // Verify ownership
         const profile = await prisma.profile.findUnique({
             where: { userId }
         });
@@ -728,27 +693,23 @@ const deleteExperience = async (req, res) => {
     }
 };
 
-// Education CRUD operations
 const createEducation = async (req, res) => {
     try {
         const userId = req.user.id;
         const { institution, description, fromMonth, fromYear, toMonth, toYear, isCurrent } = req.body;
 
-        // Validate required fields
         if (!institution || !description || !fromMonth || !fromYear) {
             return res.status(400).json({
                 message: "Institution, description, fromMonth, and fromYear are required"
             });
         }
 
-        // Validate month range (1-12)
         if (fromMonth < 1 || fromMonth > 12 || (toMonth && (toMonth < 1 || toMonth > 12))) {
             return res.status(400).json({
                 message: "Month must be between 1 and 12"
             });
         }
 
-        // Get or create profile
         let profile = await prisma.profile.findUnique({
             where: { userId }
         });
@@ -794,7 +755,6 @@ const updateEducation = async (req, res) => {
             });
         }
 
-        // Verify ownership
         const profile = await prisma.profile.findUnique({
             where: { userId }
         });
@@ -818,7 +778,6 @@ const updateEducation = async (req, res) => {
             });
         }
 
-        // Validate month range
         if (fromMonth && (fromMonth < 1 || fromMonth > 12) || 
             (toMonth && (toMonth < 1 || toMonth > 12))) {
             return res.status(400).json({
@@ -860,7 +819,6 @@ const deleteEducation = async (req, res) => {
             });
         }
 
-        // Verify ownership
         const profile = await prisma.profile.findUnique({
             where: { userId }
         });

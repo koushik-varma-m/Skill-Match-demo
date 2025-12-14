@@ -50,7 +50,6 @@ const Notifications = () => {
   };
 
   const deleteNotification = async (notificationId) => {
-    // Validate notificationId
     if (!notificationId) {
       console.error('Invalid notification ID:', notificationId);
       setDeleteError('Invalid notification ID');
@@ -63,14 +62,12 @@ const Notifications = () => {
       const response = await axios.delete(`http://localhost:3000/api/notifications/${notificationId}`, {
         withCredentials: true,
       });
-      // Remove from local state
       setNotifications(notifications.filter(notification => notification.id !== notificationId));
     } catch (err) {
       console.error('Error deleting notification:', err);
       console.error('Notification ID:', notificationId);
       console.error('Error response:', err.response?.data);
-      setDeleteError(err.response?.data?.message || 'Failed to delete notification');
-      // Clear error after 3 seconds
+      setDeleteError(err.response?.data?.message || 'Failed to delete notification');           
       setTimeout(() => setDeleteError(null), 3000);
     }
   };

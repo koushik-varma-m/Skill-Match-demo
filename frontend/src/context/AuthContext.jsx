@@ -18,12 +18,13 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuth = async () => {
     try {
-      console.log('Checking auth status...');
       const response = await axios.get('/api/user/profile');
-      console.log('Auth check response:', response.data);
       setUser(response.data);
     } catch (error) {
+      // 401 is expected when user is not logged in - don't log as error
+      if (error.response?.status !== 401) {
       console.error('Auth check failed:', error.response?.data?.message || error.message);
+      }
       setUser(null);
     } finally {
       setLoading(false);
@@ -32,19 +33,16 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      console.log('Attempting login...');
       const response = await axios.post('/api/auth/login', {
         email,
         password
       });
-      console.log('Login response:', response.data);
       setUser(response.data.user);
       return { 
         success: true,
         user: response.data.user
       };
     } catch (error) {
-      console.error('Login error:', error.response?.data || error.message);
       const errorData = error.response?.data || {};
       return {
         success: false,
@@ -56,16 +54,13 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (userData) => {
     try {
-      console.log('Attempting registration...');
       const response = await axios.post('/api/auth/signup', userData);
-      console.log('Registration response:', response.data);
       setUser(response.data.user);
       return { 
         success: true,
         user: response.data.user
       };
     } catch (error) {
-      console.error('Registration error:', error.response?.data || error.message);
       const errorData = error.response?.data || {};
       return {
         success: false,
@@ -77,12 +72,11 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      console.log('Attempting logout...');
       await axios.post('/api/auth/logout');
-      console.log('Logout successful');
       setUser(null);
     } catch (error) {
-      console.error('Logout error:', error.response?.data?.message || error.message);
+      // Logout should work even if the request fails
+      setUser(null);
     }
   };
 

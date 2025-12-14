@@ -43,7 +43,7 @@ const JobDetails = () => {
 
   const handleApplicationSuccess = () => {
     setShowApplicationForm(false);
-    fetchJobDetails(); // Refresh job details to update application status
+    fetchJobDetails(); 
   };
 
   if (loading) {
@@ -75,11 +75,9 @@ const JobDetails = () => {
     );
   }
 
-  // Check if user has applied (need to check applications array)
   const hasApplied = job.applications && job.applications.length > 0;
   const applicationStatus = hasApplied ? job.applications[0]?.status : null;
 
-  // Helper function to render requirements
   const renderRequirements = () => {
     if (Array.isArray(job.requirements)) {
       return (
@@ -95,7 +93,6 @@ const JobDetails = () => {
 
   return (
     <div className="max-w-5xl mx-auto p-4">
-      {/* Back Button */}
       <Link 
         to="/jobs" 
         className="inline-flex items-center text-teal-600 hover:text-teal-700 mb-4"
@@ -107,7 +104,6 @@ const JobDetails = () => {
       </Link>
 
       <div className="bg-white rounded-lg shadow-lg overflow-hidden">
-        {/* Header Section */}
         <div className="bg-gradient-to-r from-teal-50 to-teal-100 px-6 py-8 border-b border-teal-200">
           <div className="flex justify-between items-start">
             <div className="flex-1">
@@ -175,9 +171,7 @@ const JobDetails = () => {
           </div>
         </div>
 
-        {/* Main Content */}
         <div className="px-6 py-8 space-y-8">
-          {/* Job Description */}
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
               <svg className="w-6 h-6 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -190,7 +184,6 @@ const JobDetails = () => {
             </div>
           </div>
 
-          {/* Requirements */}
           <div>
             <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
               <svg className="w-6 h-6 mr-2 text-teal-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -203,7 +196,6 @@ const JobDetails = () => {
             </div>
           </div>
 
-          {/* Skills */}
           {job.skills && job.skills.length > 0 && (
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
@@ -225,7 +217,6 @@ const JobDetails = () => {
             </div>
           )}
 
-          {/* Experience & Education */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {job.experience && (
               <div>
@@ -258,7 +249,6 @@ const JobDetails = () => {
             )}
           </div>
 
-          {/* Recruiter Information */}
           {job.recruiter && (
             <div className="border-t border-gray-200 pt-6">
               <h2 className="text-xl font-bold text-gray-900 mb-4">Posted by</h2>
@@ -296,7 +286,6 @@ const JobDetails = () => {
         </div>
       </div>
 
-      {/* Application Form Modal */}
       {showApplicationForm && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">

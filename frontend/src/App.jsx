@@ -46,7 +46,6 @@ function App() {
                 } 
               />
               
-              {/* Protected Routes */}
               <Route 
                 path="/candidate/dashboard" 
                 element={

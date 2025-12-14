@@ -35,8 +35,8 @@ model Profile {
   profilePicture String?
   about          String?
   skills         String[]
-  experience     String[]  // Keep for backward compatibility, will be deprecated
-  education      String[]  // Keep for backward compatibility, will be deprecated
+  experience     String[]  
+  education      String[]  
   user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   experiences    Experience[]
   educations    Education[]
@@ -47,10 +47,10 @@ model Experience {
   profileId   Int
   company     String
   description String
-  fromMonth   Int      // 1-12
+  fromMonth   Int      
   fromYear    Int
-  toMonth     Int?     // 1-12, null if current
-  toYear      Int?     // null if current
+  toMonth     Int?     
+  toYear      Int?     
   isCurrent   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -64,10 +64,10 @@ model Education {
   profileId   Int
   institution String
   description String
-  fromMonth   Int      // 1-12
+  fromMonth   Int      
   fromYear    Int
-  toMonth     Int?     // 1-12, null if current
-  toYear      Int?     // null if current
+  toMonth     Int?     
+  toYear      Int?     
   isCurrent   Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
@@ -153,7 +153,7 @@ model JobApplication {
 model Notification {
   id        Int      @id @default(autoincrement())
   userId    Int
-  type      String   // CONNECTION_REQUEST, CONNECTION_ACCEPTED, NEW_POST, NEW_JOB
+  type      String   
   message   String
   read      Boolean  @default(false)
   createdAt DateTime @default(now())

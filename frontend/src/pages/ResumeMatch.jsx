@@ -12,38 +12,32 @@ const ResumeMatch = () => {
   const [matchedKeywords, setMatchedKeywords] = useState([]);
   const [missingKeywords, setMissingKeywords] = useState([]);
   const [error, setError] = useState('');
-  const [jobDescriptionMode, setJobDescriptionMode] = useState('custom'); // 'custom' or 'select'
+  const [jobDescriptionMode, setJobDescriptionMode] = useState('custom');
+  const [modelUsed, setModelUsed] = useState(null);
+  const [improvementSuggestions, setImprovementSuggestions] = useState(null);
+  const [jobSummary, setJobSummary] = useState(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
 
   useEffect(() => {
     fetchJobs();
   }, []);
 
   useEffect(() => {
-    if (selectedJobId && jobDescriptionMode === 'select') {
-      const selectedJob = jobs.find(job => job.id === Number.parseInt(selectedJobId, 10));
-      if (selectedJob) {
-        // Combine description, requirements, and skills into a comprehensive job description
-        let combinedDescription = selectedJob.description || '';
-        
-        // Add requirements if they exist
-        if (selectedJob.requirements && selectedJob.requirements.length > 0) {
-          const requirementsText = Array.isArray(selectedJob.requirements) 
-            ? selectedJob.requirements.join(', ') 
-            : selectedJob.requirements;
-          combinedDescription += '\n\nRequirements: ' + requirementsText;
-        }
-        
-        // Add skills if they exist
-        if (selectedJob.skills && selectedJob.skills.length > 0) {
-          const skillsText = Array.isArray(selectedJob.skills) 
-            ? selectedJob.skills.join(', ') 
-            : selectedJob.skills;
-          combinedDescription += '\n\nSkills: ' + skillsText;
-        }
-        
-        setJobDescription(combinedDescription);
-      }
+    if (!selectedJobId || jobDescriptionMode !== 'select') return;
+    
+    const job = jobs.find(j => j.id === parseInt(selectedJobId));
+    if (!job) return;
+
+    let desc = job.description || '';
+    if (job.requirements?.length) {
+      const reqText = Array.isArray(job.requirements) ? job.requirements.join(', ') : job.requirements;
+      desc += '\n\nRequirements: ' + reqText;
     }
+    if (job.skills?.length) {
+      const skillsText = Array.isArray(job.skills) ? job.skills.join(', ') : job.skills;
+      desc += '\n\nSkills: ' + skillsText;
+    }
+    setJobDescription(desc);
   }, [selectedJobId, jobDescriptionMode, jobs]);
 
   const fetchJobs = async () => {
@@ -61,27 +55,25 @@ const ResumeMatch = () => {
   };
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // Validate file type
-      const allowedTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
-      const allowedExtensions = ['.pdf', '.doc', '.docx'];
-      const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
-      
-      if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
-        setError('Please upload a PDF, DOC, or DOCX file');
-        return;
-      }
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-      // Validate file size (10MB)
-      if (file.size > 10 * 1024 * 1024) {
-        setError('File size must be less than 10MB');
-        return;
-      }
+    const ext = '.' + file.name.split('.').pop().toLowerCase();
+    const validTypes = ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    const validExts = ['.pdf', '.doc', '.docx'];
 
-      setResumeFile(file);
-      setError('');
+    if (!validTypes.includes(file.type) && !validExts.includes(ext)) {
+      setError('Please upload a PDF, DOC, or DOCX file');
+      return;
     }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError('File size must be less than 10MB');
+      return;
+    }
+
+    setResumeFile(file);
+    setError('');
   };
 
   const handleSubmit = async (e) => {
@@ -121,12 +113,13 @@ const ResumeMatch = () => {
       );
 
       if (response.data.success) {
-        console.log('Full response:', response.data);
         setSimilarityScore(response.data.similarityScore);
         setMatchedKeywords(response.data.matchedKeywords || []);
         setMissingKeywords(response.data.missingKeywords || []);
-        console.log('Matched keywords:', response.data.matchedKeywords);
-        console.log('Missing keywords:', response.data.missingKeywords);
+        setModelUsed(response.data.modelUsed || 'openai');
+        if (response.data.improvementSuggestions) {
+          setImprovementSuggestions(response.data.improvementSuggestions);
+        }
       } else {
         setError(response.data.message || 'Failed to analyze resume');
       }
@@ -138,32 +131,41 @@ const ResumeMatch = () => {
     }
   };
 
-  const getScoreColor = (score) => {
-    if (score >= 80) return 'bg-green-500';
-    if (score >= 60) return 'bg-teal-500';
-    if (score >= 40) return 'bg-yellow-500';
-    return 'bg-red-500';
+  const getScoreStyle = (score) => {
+    if (score >= 80) return { color: 'bg-green-500', text: 'text-green-600', stroke: '#10b981', msg: 'Excellent Match!' };
+    if (score >= 60) return { color: 'bg-teal-500', text: 'text-teal-600', stroke: '#14b8a6', msg: 'Good Match' };
+    if (score >= 40) return { color: 'bg-yellow-500', text: 'text-yellow-600', stroke: '#eab308', msg: 'Moderate Match' };
+    return { color: 'bg-red-500', text: 'text-red-600', stroke: '#ef4444', msg: 'Poor Match' };
   };
 
-  const getScoreStrokeColor = (score) => {
-    if (score >= 80) return '#10b981'; // green-500
-    if (score >= 60) return '#14b8a6'; // teal-500
-    if (score >= 40) return '#eab308'; // yellow-500
-    return '#ef4444'; // red-500
-  };
+  const summarizeJobDescription = async () => {
+    const trimmed = jobDescription?.trim();
+    if (!trimmed) {
+      setError('Please enter a job description first');
+      return;
+    }
 
-  const getScoreMessage = (score) => {
-    if (score >= 80) return 'Excellent Match!';
-    if (score >= 60) return 'Good Match';
-    if (score >= 40) return 'Moderate Match';
-    return 'Poor Match';
-  };
+    setLoadingSummary(true);
+    setJobSummary(null);
+    setError('');
 
-  const getScoreTextColor = (score) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-teal-600';
-    if (score >= 40) return 'text-yellow-600';
-    return 'text-red-600';
+    try {
+      const formData = new FormData();
+      formData.append('text', trimmed);
+      formData.append('text_type', 'job_description');
+
+      const res = await axios.post('http://localhost:8000/summarize', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+
+      if (res.data?.summary) {
+        setJobSummary(res.data.summary);
+      }
+    } catch (err) {
+      setError('Failed to summarize job description. Please try again.');
+    } finally {
+      setLoadingSummary(false);
+    }
   };
 
   const resetForm = () => {
@@ -175,7 +177,9 @@ const ResumeMatch = () => {
     setMissingKeywords([]);
     setError('');
     setJobDescriptionMode('custom');
-    // Reset file input
+    setModelUsed(null);
+    setImprovementSuggestions(null);
+    setJobSummary(null);
     const fileInput = document.getElementById('resume-upload');
     if (fileInput) fileInput.value = '';
   };
@@ -189,7 +193,6 @@ const ResumeMatch = () => {
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Resume File Upload */}
           <div>
             <label htmlFor="resume-upload" className="block text-sm font-medium text-gray-700 mb-2">
               Resume/CV <span className="text-red-500">*</span>
@@ -240,7 +243,6 @@ const ResumeMatch = () => {
             </div>
           </div>
 
-          {/* Job Description Mode Selection */}
           <div>
             <div className="block text-sm font-medium text-gray-700 mb-2">
               Job Description Source <span className="text-red-500">*</span>
@@ -254,7 +256,7 @@ const ResumeMatch = () => {
                   checked={jobDescriptionMode === 'custom'}
                   onChange={(e) => {
                     setJobDescriptionMode(e.target.value);
-                    setSelectedJobId(''); // Clear selected job when switching to custom
+                    setSelectedJobId(''); 
                   }}
                   className="mr-2 text-teal-600 focus:ring-teal-500"
                 />
@@ -268,7 +270,6 @@ const ResumeMatch = () => {
                   checked={jobDescriptionMode === 'select'}
                   onChange={(e) => {
                     setJobDescriptionMode(e.target.value);
-                    // Clear description when switching to select mode so it can be auto-filled
                     if (!selectedJobId) {
                       setJobDescription('');
                     }
@@ -279,7 +280,6 @@ const ResumeMatch = () => {
               </label>
             </div>
 
-            {/* Job Selection */}
             {jobDescriptionMode === 'select' && (
               <div className="mb-4">
                 <label htmlFor="job-select" className="block text-sm font-medium text-gray-700 mb-2">
@@ -307,7 +307,6 @@ const ResumeMatch = () => {
               </div>
             )}
 
-            {/* Job Description Text Area */}
             <div>
               <label htmlFor="job-description" className="block text-sm font-medium text-gray-700 mb-2">
                 Job Description <span className="text-red-500">*</span>
@@ -330,18 +329,85 @@ const ResumeMatch = () => {
                 }
                 required
               />
-              <p className="text-sm text-gray-500 mt-1">
-                {jobDescription.length} characters
-                {jobDescriptionMode === 'select' && selectedJobId && (
-                  <span className="ml-2 text-teal-600">
-                    • Auto-filled from job posting
-                  </span>
+              <div className="flex justify-between items-center mt-1">
+                <p className="text-sm text-gray-500">
+                  {jobDescription.length} characters
+                  {jobDescriptionMode === 'select' && selectedJobId && (
+                    <span className="ml-2 text-teal-600">
+                      • Auto-filled from job posting
+                    </span>
+                  )}
+                </p>
+                {jobDescription.trim().length > 0 && (
+                  <button
+                    type="button"
+                    onClick={summarizeJobDescription}
+                    disabled={loadingSummary}
+                    className="text-sm px-3 py-1 bg-teal-600 text-white rounded-md hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center space-x-1"
+                  >
+                    {loadingSummary ? (
+                      <>
+                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                        <span>Summarizing...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        <span>AI Summarize</span>
+                      </>
+                    )}
+                  </button>
                 )}
-              </p>
+              </div>
+              
+              {jobSummary && (
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="text-sm font-semibold text-blue-900 flex items-center">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Job Summary (AI Generated)
+                    </h4>
+                    <button
+                      onClick={() => setJobSummary(null)}
+                      className="text-blue-600 hover:text-blue-800"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                  <p className="text-sm text-blue-800 mb-3">{jobSummary.summary}</p>
+                  {jobSummary.key_skills && jobSummary.key_skills.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs font-semibold text-blue-900 mb-2">Key Skills:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {jobSummary.key_skills.map((skill, idx) => (
+                          <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {jobSummary.key_responsibilities && jobSummary.key_responsibilities.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs font-semibold text-blue-900 mb-2">Key Responsibilities:</p>
+                      <ul className="text-xs text-blue-800 space-y-1 list-disc list-inside">
+                        {jobSummary.key_responsibilities.slice(0, 5).map((resp, idx) => (
+                          <li key={idx}>{resp}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Error Message */}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md">
               <p className="font-medium">Error</p>
@@ -349,7 +415,6 @@ const ResumeMatch = () => {
             </div>
           )}
 
-          {/* Submit Button */}
           <div className="flex justify-between items-center pt-4">
             <button
               type="button"
@@ -375,16 +440,21 @@ const ResumeMatch = () => {
           </div>
         </form>
 
-        {/* Similarity Score Display */}
         {similarityScore !== null && (
           <div className="mt-8 p-6 bg-gradient-to-r from-teal-50 to-blue-50 rounded-lg border-2 border-teal-200">
             <h2 className="text-2xl font-bold text-gray-800 mb-4 text-center">Match Score</h2>
             
-            {/* Circular Progress Indicator */}
+            {modelUsed && (
+              <div className="text-center mb-4">
+                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                  Powered by OpenAI
+                </span>
+              </div>
+            )}
+            
             <div className="flex justify-center mb-6">
               <div className="relative w-32 h-32">
                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 120 120">
-                  {/* Background circle */}
                   <circle
                     cx="60"
                     cy="60"
@@ -393,13 +463,12 @@ const ResumeMatch = () => {
                     stroke="#E5E7EB"
                     strokeWidth="8"
                   />
-                  {/* Progress circle */}
                   <circle
                     cx="60"
                     cy="60"
                     r="54"
                     fill="none"
-                    stroke={getScoreStrokeColor(similarityScore)}
+                    stroke={getScoreStyle(similarityScore).stroke}
                     strokeWidth="8"
                     strokeLinecap="round"
                     strokeDasharray={`${(similarityScore / 100) * 339.292} 339.292`}
@@ -408,7 +477,7 @@ const ResumeMatch = () => {
                 </svg>
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center">
-                    <span className={`text-3xl font-bold ${getScoreTextColor(similarityScore)}`}>
+                    <span className={`text-3xl font-bold ${getScoreStyle(similarityScore).text}`}>
                       {similarityScore.toFixed(1)}%
                     </span>
                   </div>
@@ -416,17 +485,16 @@ const ResumeMatch = () => {
               </div>
             </div>
 
-            {/* Progress Bar */}
             <div className="mb-4">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-sm font-medium text-gray-700">Similarity Score</span>
-                <span className={`text-sm font-bold ${getScoreTextColor(similarityScore)}`}>
+                <span className={`text-sm font-bold ${getScoreStyle(similarityScore).text}`}>
                   {similarityScore.toFixed(1)}%
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
                 <div
-                  className={`h-full ${getScoreColor(similarityScore)} rounded-full transition-all duration-1000 ease-out flex items-center justify-end pr-2`}
+                  className={`h-full ${getScoreStyle(similarityScore).color} rounded-full transition-all duration-1000 ease-out flex items-center justify-end pr-2`}
                   style={{ width: `${similarityScore}%` }}
                 >
                   {similarityScore > 10 && (
@@ -438,22 +506,83 @@ const ResumeMatch = () => {
               </div>
             </div>
 
-            {/* Score Message */}
             <div className="text-center">
-              <p className={`text-lg font-semibold ${getScoreTextColor(similarityScore)} mb-2`}>
-                {getScoreMessage(similarityScore)}
+              <p className={`text-lg font-semibold ${getScoreStyle(similarityScore).text} mb-2`}>
+                {getScoreStyle(similarityScore).msg}
               </p>
               <p className="text-sm text-gray-600">
                 Your resume matches {similarityScore.toFixed(1)}% of the job description requirements
               </p>
             </div>
 
-            {/* Keywords Analysis */}
+            {improvementSuggestions && (
+              <div className="mt-6 pt-6 border-t border-teal-200">
+                <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                  <svg className="w-6 h-6 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                  AI-Powered Improvement Suggestions
+                </h3>
+                
+                {improvementSuggestions.suggestions && improvementSuggestions.suggestions.length > 0 && (
+                  <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 mb-4">
+                    <h4 className="text-sm font-semibold text-purple-900 mb-3">Recommendations</h4>
+                    <ul className="space-y-2">
+                      {improvementSuggestions.suggestions.map((suggestion, idx) => (
+                        <li key={idx} className="text-sm text-purple-800 flex items-start">
+                          <svg className="w-5 h-5 mr-2 text-purple-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                          {suggestion}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {improvementSuggestions.actionable_items && improvementSuggestions.actionable_items.length > 0 && (
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                    <h4 className="text-sm font-semibold text-green-900 mb-3">Actionable Items to Add</h4>
+                    <ul className="space-y-2">
+                      {improvementSuggestions.actionable_items.map((item, idx) => (
+                        <li key={idx} className="text-sm text-green-800 flex items-start">
+                          <svg className="w-5 h-5 mr-2 text-green-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {item}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {improvementSuggestions.keywords_to_add && improvementSuggestions.keywords_to_add.length > 0 && (
+                  <div className="mb-4">
+                    <h4 className="text-sm font-semibold text-gray-800 mb-2">Keywords to Add</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {improvementSuggestions.keywords_to_add.map((keyword, idx) => (
+                        <span key={idx} className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full border border-yellow-300">
+                          {keyword}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {improvementSuggestions.score_impact && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <p className="text-sm text-blue-900">
+                      <span className="font-semibold">Expected Impact:</span> {improvementSuggestions.score_impact}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             {similarityScore !== null && (
               <div className="mt-6 pt-6 border-t border-teal-200">
                 <h3 className="text-lg font-semibold text-gray-800 mb-4">Keyword Analysis</h3>
                 <div className="grid md:grid-cols-2 gap-4">
-                  {/* Matched Keywords */}
                   {matchedKeywords.length > 0 ? (
                     <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                       <h4 className="text-sm font-semibold text-green-800 mb-2 flex items-center">
@@ -483,7 +612,6 @@ const ResumeMatch = () => {
                     </div>
                   )}
 
-                  {/* Missing Keywords */}
                   {missingKeywords.length > 0 ? (
                     <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                       <h4 className="text-sm font-semibold text-red-800 mb-2 flex items-center">
@@ -516,7 +644,6 @@ const ResumeMatch = () => {
               </div>
             )}
 
-            {/* Score Interpretation */}
             <div className="mt-6 pt-6 border-t border-teal-200">
               <h3 className="text-sm font-semibold text-gray-700 mb-2">Score Interpretation:</h3>
               <ul className="text-sm text-gray-600 space-y-1">
@@ -535,7 +662,6 @@ const ResumeMatch = () => {
               </ul>
             </div>
 
-            {/* Action Buttons */}
             <div className="mt-6 flex justify-center space-x-4">
               <button
                 onClick={resetForm}

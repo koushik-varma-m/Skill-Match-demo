@@ -29,7 +29,6 @@ app.use((err, req, res, next) => {
 app.use(express.json());
 app.use(cookieParser());
 
-// Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const authRouter = require('./routes/auth.route');
@@ -50,7 +49,6 @@ app.use('/api/recruiter', recruiterRouter);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/resume-match', resumeMatchRouter);
 
-// Create upload directories if they don't exist
 const uploadDirs = ['uploads', 'uploads/profile', 'uploads/posts', 'uploads/resumes'];
 uploadDirs.forEach(dir => {
   const dirPath = path.join(__dirname, dir);

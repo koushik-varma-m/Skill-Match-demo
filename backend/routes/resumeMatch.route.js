@@ -6,7 +6,7 @@ const { analyzeResumeMatch } = require('../controllers/resumeMatch.controller');
 
 const router = express.Router();
 
-// Configure multer for resume file uploads
+
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
         const uploadDir = path.join(__dirname, '..', 'uploads', 'resumes');
@@ -24,10 +24,9 @@ const storage = multer.diskStorage({
 const upload = multer({
     storage: storage,
     limits: {
-        fileSize: 10 * 1024 * 1024 // 10MB limit (larger than job applications to allow for detailed resumes)
+        fileSize: 10 * 1024 * 1024
     },
     fileFilter: function (req, file, cb) {
-        // Accept PDF and DOCX files
         const allowedExtensions = ['.pdf', '.doc', '.docx'];
         const fileExtension = path.extname(file.originalname).toLowerCase();
         
@@ -39,7 +38,6 @@ const upload = multer({
     }
 });
 
-// Error handling middleware for multer errors
 const handleMulterError = (err, req, res, next) => {
     if (err instanceof multer.MulterError) {
         if (err.code === 'LIMIT_FILE_SIZE') {
@@ -64,16 +62,6 @@ const handleMulterError = (err, req, res, next) => {
     next();
 };
 
-/**
- * POST /api/resume-match
- * 
- * Analyze resume against job description
- * 
- * @body {string} jobDescription - Job description text
- * @body {file} resumeFile - Resume file (PDF or DOCX)
- * 
- * @returns {Object} { success: boolean, similarityScore: number }
- */
 router.post('/', upload.single('resumeFile'), handleMulterError, analyzeResumeMatch);
 
 module.exports = router;
