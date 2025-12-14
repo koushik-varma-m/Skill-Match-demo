@@ -26,7 +26,9 @@ SkillMatch is a full-stack application that connects job seekers with recruiters
 - **AI-Powered Resume Matching**
   - Get instant similarity scores between your resume and job descriptions
   - Understand how well your resume matches job requirements
-  - Improve your applications based on match scores
+  - Receive AI-generated improvement suggestions
+  - Get actionable recommendations to enhance your resume
+  - Summarize job descriptions for quick understanding
 
 - **Professional Networking**
   - Connect with other professionals
@@ -107,14 +109,15 @@ SkillMatch is a full-stack application that connects job seekers with recruiters
 - **Cookie Parser** - Cookie handling
 
 ### AI Service
-- **Python 3.13** - Programming language
+- **Python 3.8+** - Programming language
 - **FastAPI** - Modern web framework
 - **Uvicorn** - ASGI server
-- **Sentence Transformers** - NLP models for semantic similarity
-- **PyTorch** - Deep learning framework
+- **OpenAI API** - Text embeddings (text-embedding-3-small) and GPT-3.5-turbo
+- **scikit-learn** - Cosine similarity calculation
 - **pdfplumber** - PDF parsing
 - **python-docx** - DOCX file processing
-- **spaCy** - Natural language processing
+- **spaCy** - Natural language processing for keyword extraction
+- **NumPy** - Numerical computations
 
 ## 📋 Prerequisites
 
@@ -237,7 +240,15 @@ Before you begin, ensure you have the following installed:
    python -m spacy download en_core_web_sm
    ```
 
-5. **Start AI service**
+5. **Configure OpenAI API Key**
+   ```bash
+   # Create .env file
+   cp .env.example .env
+   # Edit .env and add your OpenAI API key
+   OPENAI_API_KEY=your_openai_api_key_here
+   ```
+
+6. **Start AI service**
    ```bash
    uvicorn resume_match_service:app --host 0.0.0.0 --port 8000
    # Or with auto-reload for development:
@@ -375,8 +386,10 @@ For detailed API documentation, see [API_DOCUMENTATION.md](./API_DOCUMENTATION.m
 6. **Use Resume Matching**
    - Go to "Resume Match" page
    - Upload your resume
-   - Enter or paste a job description
-   - Get instant similarity score
+   - Enter or paste a job description (or select from posted jobs)
+   - Use "AI Summarize" to get quick job description summary
+   - Get instant similarity score with matched/missing keywords
+   - View AI-powered improvement suggestions
 
 7. **Network**
    - Connect with other professionals
@@ -434,9 +447,14 @@ AI_SERVICE_URL="http://localhost:8000"
 - API base URL is configured in `frontend/src/context/AuthContext.jsx`
 - Default: `http://localhost:3000`
 
-#### AI Service
+#### AI Service (.env)
+```env
+# OpenAI API Key (required)
+OPENAI_API_KEY=your_openai_api_key_here
+```
+
 - Port: 8000 (default)
-- Model: BAAI/bge-small-en-v1.5 (automatically downloaded on first use)
+- Models: OpenAI text-embedding-3-small (embeddings) and GPT-3.5-turbo (suggestions/summaries)
 
 ## 🧪 Testing
 
@@ -489,17 +507,23 @@ kill -9 <PID>
    source venv/bin/activate
    ```
 
-2. **Reinstall dependencies:**
+2. **Verify OpenAI API Key:**
+   ```bash
+   # Check .env file exists and has OPENAI_API_KEY
+   cat .env | grep OPENAI_API_KEY
+   ```
+
+3. **Reinstall dependencies:**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Download spaCy model:**
+4. **Download spaCy model:**
    ```bash
    python -m spacy download en_core_web_sm
    ```
 
-4. **Check Python version:**
+5. **Check Python version:**
    ```bash
    python3 --version  # Should be 3.8+
    ```
@@ -569,10 +593,9 @@ tail -f logs/ai-service.log
 
 ## 📚 Additional Documentation
 
-- [Frontend README](./frontend/README.md) - Frontend-specific documentation
-- [AI Service README](./ai-service/README.md) - AI service documentation
+- [AI Service README](./ai-service/README.md) - AI service documentation and setup
 - [API Documentation](./API_DOCUMENTATION.md) - Complete API reference
-- [Backend Routes Documentation](./backend/routes/RESUME_MATCH_API.md) - Resume match API details
+- [AI Use Cases](./AI_USE_CASES.md) - AI features and use cases documentation
 
 ## 🤝 Contributing
 
